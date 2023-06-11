@@ -4,6 +4,47 @@ Forest Landscape Metrics (FLM)
 
 ## Getting started
 
+
+## Data
+
+The complementary data to run these scripts is located in
+
+`\\gdfs06\DATEN09\ESA-EO4SDG_D9\02_analysis\FLM\Hessen\test_data\gitlab_v1`.
+
+To run the example, clone the repository and copy the `data` folder located in the location above into the project folder. 
+The final project folder structure should look like this:
+
+```
+.
++-- data
+|   +-- aoi
+|   |   +-- aoi_gadm_test.cpg
+|   |   +-- aoi_gadm_test.dbf
+|   |   +-- aoi_gadm_test.prj
+|   |   +-- aoi_gadm_test.sbn
+|   |   +-- aoi_gadm_test.sbx
+|   |   +-- aoi_gadm_test.shp
+|   |   +-- aoi_gadm_test.shx
+|   |   +-- test_aoi2.cpg
+|   |   +-- test_aoi2.dbf
+|   |   +-- test_aoi2.prj
+|   |   +-- test_aoi2.sbn
+|   |   +-- test_aoi2.sbx
+|   |   +-- test_aoi2.shp
+|   |   \-- test_aoi2.shx
+|   \-- hessen
+|       +-- hessen_type_test.tif
+|       \-- hessen_type_test2.tif
++-- eo4sdg-forest-flm.Rproj
++-- R
+|   +-- 00-inputs.R
+|   +-- 01-aoicheck.R
+|   +-- 02-clip.R
+|   \-- 03-flm.R
+\-- README.md
+
+```
+
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
 
 Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
