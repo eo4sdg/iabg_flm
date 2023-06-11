@@ -9,7 +9,7 @@
 #' @examples
 aoi_too_big <-
     function(aoi, max_area = 1000){
-        max_area <- units(max_area, ha)
+        max_area <- units::set_units(max_area, "ha")
         area <- sum(st_area(aoi))
         area > max_area
 }
