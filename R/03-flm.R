@@ -15,7 +15,14 @@
 #' @export
 #'
 #' @examples
-calculate_flm <- function(x, aoi, plot_id = NULL, metrics = c('area', "ca", 'lpi', 'te'), max_area = 1000, class_names, tempdir = "data/temp", ...){
+calculate_flm <- function(x,
+                          aoi,
+                          plot_id = NULL,
+                          metrics = c('area', "ca", 'lpi', 'te'),
+                          max_area = 1000,
+                          class_names,
+                          tempdir = "data/temp",
+                          ...){
 
     # select metrics
     # metrics = c('area', "ca",  'ta', 'pland',
@@ -31,7 +38,7 @@ calculate_flm <- function(x, aoi, plot_id = NULL, metrics = c('area', "ca", 'lpi
 
     # load landscape
     landscape <-
-        clip_aoi(x, aoi)
+        clip_aoi(x, aoi, ...)
 
     # calculate metrics
     area_metrics <-

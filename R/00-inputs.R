@@ -16,7 +16,3 @@ path <- list(aoi = "data/aoi/aoi_gadm_test.shp",
 
 aoi <- st_read(path$aoi)
 
-
-tic()
-x <- calculate_flm(aoi, max_area = 10000000, plot_id = "NAME_4")
-toc()
