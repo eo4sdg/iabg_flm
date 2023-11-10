@@ -1,5 +1,3 @@
-
-
 #' Calculate FLM
 #'
 #' Computes forest landscape metrics based on aoi. the input lc is hardcoded.
@@ -9,35 +7,38 @@
 #' @param max_area
 #' @param class_names
 #' @param ...
+#' @param x
+#' @param metrics
+#' @param tempdir
 #'
 #' @return
 #' @export
 #'
 #' @examples
-calculate_flm <- function(aoi, plot_id, max_area = 1000, class_names, ...){
+calculate_flm <- function(x, aoi, plot_id = NULL, metrics = c('area', "ca", 'lpi', 'te'), max_area = 1000, class_names, tempdir = "data/temp", ...){
 
     # select metrics
     # metrics = c('area', "ca",  'ta', 'pland',
     #             'core', 'tca','cpland', 'cai', 'ed', 'lpi', 'te')
 
-    metrics = c('area', "ca", 'lpi', 'te')
+
 
     # initial checks
     if(aoi_too_big(aoi, max_area = max_area)) stop("aoi is too big")
 
-
+    gdfR::path_exists(tempdir, create = T)
+    terra::terraOptions(tempdir = tempdir)
 
     # load landscape
     landscape <-
-        terra::rast(path$raster) %>%
-        clip_aoi(aoi) # here put temp file
+        clip_aoi(x, aoi)
 
     # calculate metrics
     area_metrics <-
         sample_lsm(landscape,
                    aoi,
                    metric = metrics,
-                   plot_id = pull(aoi, !!plot_id)
+                   plot_id = dplyr::if_else(missing(plot_id), NULL, dplyr::pull(aoi, !!plot_id))
         )
 
     if(!missing(class_names)) {
@@ -50,8 +51,8 @@ calculate_flm <- function(aoi, plot_id, max_area = 1000, class_names, ...){
     area_metrics_w <-
         area_metrics %>%
         filter(level != 'patch') %>%
-        pivot_wider(id_cols = plot_id,
-                    names_from = c("level", 'class', 'metric'),
+        pivot_wider(id_cols     = plot_id,
+                    names_from  = c("level", 'class', 'metric'),
                     values_from = value)
 
     area_metrics_spatial <-
@@ -65,5 +66,4 @@ calculate_flm <- function(aoi, plot_id, max_area = 1000, class_names, ...){
         # render a rmd file with tables
             #
 }
-
 
