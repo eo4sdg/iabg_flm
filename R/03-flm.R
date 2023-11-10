@@ -17,8 +17,9 @@
 #' @examples
 calculate_flm <- function(x, aoi, plot_id = NULL, metrics = c('area', "ca", 'lpi', 'te'), max_area = 1000, class_names, tempdir = "data/temp", ...){
 
-    # Area and edge metrics
-    #metrics = c('area','gyrate','pland', 'ca', 'lpi', 'te', 'ed', 'ta')
+    # select metrics
+    # metrics = c('area', "ca",  'ta', 'pland',
+    #             'core', 'tca','cpland', 'cai', 'ed', 'lpi', 'te')
 
 
 
