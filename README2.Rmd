@@ -1,0 +1,703 @@
+---
+title: "Landscape Metrics"
+author: "Emin"
+date: "2023-11-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+#Thu Nov 16 12:25:40 2023----------
+# D. Emin -------------------------
+
+```
+
+## Introduction
+
+Write short ***intro*** on what landscape metrics are from the theory section.
+
+form J.
+
+## Inputs
+
+[link here](www.google.de)
+
+The input for this analysis comes from Hessen. We will use the Forest Data and a set of municipalities (Gemeinde) simulating an use case in which the Gemeinde wants to get some useful statistics about their forest.
+
+```{r}
+library(sf)
+library(gdfR)
+library(tidyverse)
+library(landscapemetrics)
+library(fs)
+library(terra)
+library(leaflet)
+library(htmlTable)
+```
+
+```{r}
+#inputs
+aoi <- st_read('data/aoi_gadm_test.shp')
+landscape <- rast('data/hessen_type_test2.tif')
+
+```
+
+The complementary data to run these scripts is located in
+
+`\\gdfs06\DATEN09\ESA-EO4SDG_D9\02_analysis\FLM\Hessen\test_data\gitlab_v1`.
+
+To run the example, clone the repository and copy the `data` folder located in the location above into the project folder. The final project folder structure should look like this:
+
+    .
+    +-- data
+    |   +-- aoi
+    |   |   +-- aoi_gadm_test.cpg
+    |   |   +-- aoi_gadm_test.dbf
+    |   |   +-- aoi_gadm_test.prj
+    |   |   +-- aoi_gadm_test.sbn
+    |   |   +-- aoi_gadm_test.sbx
+    |   |   +-- aoi_gadm_test.shp
+    |   |   +-- aoi_gadm_test.shx
+    |   |   +-- test_aoi2.cpg
+    |   |   +-- test_aoi2.dbf
+    |   |   +-- test_aoi2.prj
+    |   |   +-- test_aoi2.sbn
+    |   |   +-- test_aoi2.sbx
+    |   |   +-- test_aoi2.shp
+    |   |   \-- test_aoi2.shx
+    |   \-- hessen
+    |       +-- hessen_type_test.tif
+    |       +-- hessen_type_test2.tif
+    |       \-- metrics.csv
+    +-- eo4sdg-forest-flm.Rproj
+    +-- R
+    |   +-- 00-inputs.R
+    |   +-- 01-aoicheck.R
+    |   +-- 02-clip.R
+    |   \-- 03-flm.R
+    \-- README.md
+
+## Overview of R-package `landscapemetrics`
+
+Here shortly review the package itself, how it s build etc. put some useful links.
+
+Checking the validity of a landscape.
+
+```{r}
+# convert to factor (for plotting purposes)
+cls <- data.frame(id=1:3, cover=c("Nadelwald","Laubwald", "Mischwald"))
+levels(landscape) <- cls
+plot(landscape)
+plot(st_geometry(aoi), add = T)
+text(st_coordinates(st_centroid(aoi)), aoi$NAME_4)
+```
+
+```{r}
+check_landscape(landscape)
+```
+
+```{r}
+show_patches(landscape)
+```
+
+We can check a specific metric.
+
+```{r}
+show_lsm(landscape, what = 'lsm_p_area')
+```
+
+```{r}
+# calculate the area metrics (and some more)
+area_metrics <- 
+    sample_lsm(landscape,
+           aoi,
+          metric = c('area', "ca",  'ta', 'pland',
+                     'core', 'tca','cpland', 'cai', 'ed', 'lpi', 'te'),
+          plot_id = aoi$NAME_4
+          ) %>% 
+    mutate(class = recode(class, !!!setNames(cls$cover, cls$id))) 
+```
+
+Summary for a single Gemeinde.
+
+```{r}
+area_metrics %>% 
+    filter(plot_id == 'Alheim', 
+           level == "class") %>% 
+    pivot_wider(id_cols = metric, names_from = class, values_from = value) %>% 
+    mutate_if(is.numeric, ~round(.,2)) %>% 
+    knitr::kable()
+```
+
+```{r}
+area_metrics %>% 
+    filter(level == 'landscape') %>% 
+    pivot_wider(id_cols = metric, names_from = plot_id, values_from = value) %>% 
+    mutate_if(is.numeric, ~round(.,2)) %>% 
+    knitr::kable()
+```
+
+```{r}
+area_metrics_w <- 
+    area_metrics %>% 
+    filter(level != 'patch') %>% 
+    pivot_wider(id_cols = plot_id,
+                names_from = c("level", 'class', 'metric'),
+                values_from = value)
+
+DT::datatable(area_metrics_w)
+```
+
+## Exploratory data analysis
+
+Here we will perform a first analysis into the behaviour of the different metrics.
+
+For this examples we will use a precalculated `.csv` containing all metrics.
+
+```{r}
+metrics <- read_csv("data/metrics.csv")
+```
+
+### Plotting Functions
+
+We defined several standardized ways to plot the results.
+
+```{r}
+my_ggplot <- function(data, x, y, title, subtitle=NULL){
+    ggplot(data) +
+        ggtitle(title, subtitle) +
+        geom_bar(aes({{x}},
+                     {{y}},
+                     fill=class),
+                 stat="identity",
+                 width=.5,
+                 #position = "dodge"
+        ) +
+        scale_x_discrete(guide = guide_axis(angle = 30))
+}
+
+
+my_boxplot <- function(data, means, .metric, title, subtitle = NULL){
+
+    ggplot(data = filter(data,
+                         metric == .metric),
+           aes(x    = class,
+               y    = value,
+               fill = class)) +
+        geom_boxplot() +
+        geom_line(data  = filter(means, metric == .metric),
+                  aes(x = class,
+                      y = value,
+                      group = interaction(plot_id, metric))) +
+        facet_wrap(~plot_id,
+                   scales = "free") +
+        ggtitle(str_to_title(title), subtitle) +
+        theme(legend.position = "none")
+}
+```
+
+### Area and edge metrics
+
+Note: we consider each administrative unit (9 in total) as a landscape
+
+Overview of landscape metrics grouped by type `lm_by_type <- list_lsm() |> group_by(type) |> nest()`
+
+#### Edge {#sec-edge}
+
+| Metric       | Patch | Class | Landscape |
+|--------------|-------|-------|-----------|
+| TOTAL EDGE   |       | ✔️    | ✔️        |
+| EDGE DENSITY |       | ✔️    | ✔️        |
+
+#### Area {#sec-area}
+
+| Metric              | Patch | Class | Landscape |
+|---------------------|-------|-------|-----------|
+| AREA                | ✔️    | ✔️    | ✔️        |
+| PLAND               |       | ✔️    |           |
+| CORE AREA           | ✔️    | ✔️    | ✔️        |
+| CPLAND              |       | ✔️    |           |
+| CORE AREA INDEX     |       |       |           |
+| LARGEST PATCH INDEX |       | ✔️    | ✔️        |
+
+```{r}
+# Area and edge metrics --------------------------------------------------
+
+#Copy the sample_lsm output as xx and group by landscape extent name
+metrics_a <-
+    metrics[[1]] |>
+    group_by(plot_id)
+
+#Also possible to nest the dataframe so that we have all sample_lsm results categorised by landscape extent
+# xx <- x[[1]] |>
+#     group_by(plot_id) |>
+#     nest()
+
+# Calculate the area for each "landscape" out of the aoi data
+aoi_w_area <-
+    aoi |>
+    mutate(plot_id = NAME_4) |>
+    select(plot_id) |>
+    mutate(area = units::set_units(st_area(geometry), "ha")) |>
+    st_drop_geometry()
+
+
+# Do a left join to the dataset with total landscape area and define it as a new variable
+metrics_a <-
+    metrics_a |>
+    left_join(aoi_w_area) |>
+    mutate(plot_id,
+           area             = as.numeric(area),
+           relative_area    = (value/area)*100,
+           class            = factor(class))
+
+#------------ # Mean patch size for a class --------------------------------
+# The metric summarises each class as the mean of all patch areas belonging to class i.
+# The metric is a simple way to describe the composition of the landscape.
+# Especially together with the total class area (lsm_c_ca),
+# it can also give an an idea of patch structure (e.g. many small patches vs. few larges patches).
+
+
+# Tried boxplots on patch level, but too many outliers.
+# Boxplots are very squished
+
+xx_mean_area_class <-
+    metrics_a |>
+    filter(level == "class", str_detect(metric, "_mn")) |>
+    mutate(metric = str_replace(metric, "_mn", ""))
+
+
+plot_mean_patch_size <-
+    metrics_a |>
+    filter(level  == "patch") |>
+    my_boxplot(means    = xx_mean_area_class,
+               .metric  = "area",
+               title    = "Mean size",
+               subtitle = "Patch level" )
+
+# Bar plots on class level
+plot_size_class <-
+    metrics_a |>
+    filter(metric == "area_mn",
+           level  == "class") |>
+    my_ggplot(plot_id,
+              value,
+              "Mean size",
+              "Class level - unclassified area not included" )
+
+#
+#------------ # Total class area --------------------------------
+# xx_totalarea_class <-
+#     metrics_a |>
+#     filter(metric == "ca") |>
+#     mutate(total_area = value) |>
+#     my_ggplot(plot_id,
+#               total_area,
+#               "Total area",
+#               "Class level - unclassified area not included" )
+
+
+
+#------------ # Percentage of landscape area -------------------------------
+# It is the percentage of the landscape belonging to class i.
+# It is a measure of composition and because of the relative character directly comparable
+# among landscapes with different total areas.
+
+##
+##NOTE: We include two pland calculations in this chapter. One with background ("manual" calculation)
+##      and one without (built-in metric)
+
+# Use the total landscape area to calculate class area percentage (background considered)
+plot_pland_w_backg <-
+    metrics_a |>
+    filter(metric == "ca") |>
+    my_ggplot(plot_id,
+              relative_area,
+              title     = "Percentage of landscape",
+              subtitle  = "Class level - unclassified area included" )
+
+
+
+# Calculate percentage of landscape per class using the built-in metric pland (background not considered)
+# xx_pland_wout_backg  <-
+#     metrics_a |>
+#     filter(metric == "pland",
+#            level  == "class") |>
+#     mutate(percentage_of_land = value) |>
+#     my_ggplot(landscape_extent,
+#               percentage_of_land,
+#               "Percentage of Landscape",
+#               "Class level - unclassified area not included")
+
+
+
+#------------ # Radius of gyration (class level) #---------------------------------------------
+# Radius of gyration is a measure of patch extent (i.e., how far-reaching it is);
+# thus, it is effected by both patch size and patch compaction.
+# Note that the choice of the 4-neighbor or 8-neighbor rule for delineating patches
+# will have an impact on this metric.
+# Behaviour: Approaches GYRATE_MN = 0 if every patch is a single cell. Increases, without limit, when only one patch is present.
+
+
+plot_gyrate <-
+    metrics_a |>
+    filter(metric == "gyrate_mn",
+           level  == "class") |>
+    my_ggplot(plot_id,
+              value,
+              title     = "Gyration value",
+              subtitle  = "Class level")
+
+
+
+
+#------------ # Largest patch index #----------------------------------
+# It is the percentage of the landscape covered by the corresponding largest patch of each class i.
+# It is a simple measure of dominance.
+
+plot_lpi <-
+    metrics_a |>
+    filter(metric == "lpi",
+           level  == "class") |>
+    my_ggplot(plot_id,
+              value,
+              title     = "Largest Patch Index",
+              subtitle  = "Class level")
+
+
+
+#------------ # Edge density #----------------------------------------------------------------
+# The edge density equals the sum of all edges of class i in relation to the landscape area.
+# The boundary of the landscape is only included in the corresponding total class edge length
+# if count_boundary = TRUE. The metric describes the configuration of the landscape,
+# e.g. because an aggregation of the same class will result in a low edge density.
+# The metric is standardized to the total landscape area, and therefore comparisons among
+# landscapes with different total areas are possible.
+
+
+plot_ed <-
+    metrics_a |>
+    filter(metric == "ed",
+           level  == "class") |>
+    my_ggplot(plot_id,
+              value,
+              title     = "Edge density",
+              subtitle  = "Class level")
+
+
+
+
+
+
+
+
+
+# Shape metrics ----------------------------------------------------------
+
+#Copy the sample_lsm output as xx and group by landscape extent name
+xx_shape <- x_shape[[1]] |>
+    group_by(plot_id)
+
+# Calculate the area for each "landscape" out of the aoi data
+aoi_w_area <- aoi |>
+    mutate(plot_id = NAME_4) |>
+    select(plot_id) |>
+    mutate(area = units::set_units(st_area(geometry), "ha")) |>
+    st_drop_geometry()
+
+
+# Do a left join to the dataset with total landscape area and define it as a new variable
+xx_shape <- xx_shape |>
+    left_join(aoi_w_area) |>
+    mutate(plot_id,
+           area             = as.numeric(area),
+           relative_area    = (value/area)*100,
+           class            = factor(class))
+
+
+
+
+#-------------# Shape index #-------------------------------------------------
+# It describes the ratio between the actual perimeter of the patch and the
+# square root of patch area. It is a simple measure of shape complexity.
+#
+# Behavior: Equals SHAPE_MN = 1 if all patches are squares. Increases,
+# without limit, as the shapes of patches become more complex.
+#
+
+# Creating boxplots to visualize metrics per class and compare them between landscapes
+
+
+# To plot a line connecting all mean values between classes (regardless of metric and landscape)
+# Extract the mean values of each metric per class and delete the "_mn" suffix
+xx_mean_class <-
+    xx_shape |>
+    filter(level == "class",
+           str_detect(metric, "_mn")) |>
+    mutate(metric = str_replace(metric, "_mn", ""))
+
+#Check for correct replacement using
+#unique(xx_mean_class$metric)
+
+
+
+xx_shapeindex <-
+    xx_shape |>
+    filter(level  == "patch") |>
+    my_boxplot(means = xx_mean_class,
+               .metric = "shape",
+               title = "shape index",
+               subtitle = "Patch level")
+
+
+
+#-------------# Related circumscribing circle #-------------------------------------------------
+# The metric characterises the compactness of the patch and is comparable among patches with different area.
+# Behaviour: CIRCLE = 0 for a circular patch and approaches CIRCLE = 1 for a linear patch.
+
+
+xx_circle <-
+    xx_shape |>
+    filter(level  == "patch") |>
+    my_boxplot(means = xx_mean_class,
+               .metric = "circle",
+               title= "Related circumscribing circle",
+               subtitle = "Patch level")
+
+
+#-------------# Contiguity index #-------------------------------------------------
+# The metric characterises the compactness of the patch and is comparable among patches with different area.
+# Behaviour: CIRCLE = 0 for a circular patch and approaches CIRCLE = 1 for a linear patch.
+
+
+xx_contig <-
+    xx_shape |>
+    filter(level  == "patch") |>
+    my_boxplot(means = xx_mean_class,
+               .metric = "contig",
+               title= "Contiguity index",
+               subtitle = "Patch level")
+
+
+
+
+
+
+
+
+# Core metrics ----------------------------------------------------------
+
+
+#Copy the sample_lsm output as xx and group by landscape extent name
+xx_core <- x_core[[1]] |>
+    group_by(plot_id)
+
+# Calculate the area for each "landscape" out of the aoi data
+aoi_w_area <- aoi |>
+    mutate(plot_id = NAME_4) |>
+    select(plot_id) |>
+    mutate(area = units::set_units(st_area(geometry), "ha")) |>
+    st_drop_geometry()
+
+
+# Do a left join to the dataset with total landscape area and define it as a new variable
+xx_core <- xx_core |>
+    left_join(aoi_w_area) |>
+    mutate(plot_id,
+           area             = as.numeric(area),
+           relative_area    = (value/area)*100,
+           class            = factor(class))
+
+
+#-------------# Core area index #-------------
+# Range: 0 <= CAI_MN <= 100
+# Behaviour: CAI_MN = 0 when all patches have no core area and approaches
+#            CAI_MN = 100 with increasing percentage of core area within patches.
+
+
+# Creating boxplots to visualize metrics per class and compare them between landscapes
+
+
+# To plot a line connecting all mean values between classes (regardless of metric and landscape)
+# Extract the mean values of each metric per class and delete the "_mn" suffix
+xx_mean_class_core <-
+    xx_core |>
+    filter(level == "class",
+           str_detect(metric, "_mn")) |>
+    mutate(metric = str_replace(metric, "_mn", ""))
+
+#Check for correct replacement using
+unique(xx_mean_class_core$metric)
+
+xx_coreindex <-
+    xx_core |>
+    filter(level  == "patch") |>
+    my_boxplot(means = xx_mean_class_core,
+               .metric = "cai",
+               title = "core area index",
+               subtitle = "Patch level")
+
+
+
+#-------------# Core percentage of land (not yet fully done) #-------------
+# It is the percentage of core area of class i in relation to the total landscape area.
+# A cell is defined as core area if the cell has no neighbour with a different value than
+# itself (rook's case). Because CPLAND is a relative measure,
+# it is comparable among landscapes with different total areas.
+
+# Units; Percentage
+# Range: 0 <= CPLAND < 100
+# Behaviour: Approaches CPLAND = 0 if CORE = 0 for all patches.
+#            Increases as the amount of core area increases, i.e. patches become
+#            larger while being rather simple in shape.
+
+xx_cpland_w_backg <-
+    xx_core |>
+    filter(metric == "cpland") |>
+    my_ggplot(plot_id,
+              relative_area,
+              "Core area percentage of landscape",
+              "Class level - unclassified area included" )
+
+
+
+# # Calculate core area percentage of landscape per class using the built-in metric cpland (background not considered)
+xx_cpland_wout_backg  <-
+    xx_core |>
+    filter(metric == "cpland",
+           level  == "class")|>
+    my_ggplot(plot_id,
+              value,
+              "Core area percentage of landscape",
+              "Class level - unclassified area not included")
+
+
+
+
+
+
+
+
+
+# TODO
+# --------------------------------# Visualisation # -------------------------------
+# This section takes the output from our calculated *shape metrics* as an example.
+# You need to run the section "Shape metrics" in this file before continuing with the visualisation
+
+
+# Create a single boxplot per metric per landscape (region)
+my_single_boxplot <- function(data, land, .metric, title, subtitle = NULL){
+    data |>
+        filter(level  == "patch",
+               plot_id == land,
+               metric == .metric) |>
+        ggplot(aes(x = class,
+                   y = value,
+                   fill = class)) +
+        geom_boxplot() +
+        facet_wrap(~plot_id,
+                   scales = "free") +
+        ggtitle(str_to_title(title), subtitle) +
+        theme(legend.position = "none")
+}
+
+
+
+xx_shape_alheim <-
+    my_single_boxplot(data = xx_shape,
+                      land = "Alheim",
+                      #means = xx_mean_class,
+                      .metric = "shape",
+                      title = "shape index",
+                      subtitle = "Alheim")
+
+#
+# xx_shape_al <-
+#     xx2 |>
+#     filter(level  == "patch",
+#            plot_id == "Alheim",
+#            metric == "shape") |>
+#     ggplot(aes(x = class,
+#                y = value,
+#                fill = class)) +
+#     geom_boxplot() +
+#     geom_line(data = filter(means, metric == .metric),
+#               aes(x = class,
+#                   y = value,
+#                   group = interaction(plot_id, metric))) +
+#     facet_wrap(~plot_id,
+#                scales = "free") +
+#     ggtitle(str_to_title("shape index"), "Alheim") +
+#     theme(legend.position = "none")
+```
+
+## Leaflet Proof of Concept
+
+Here we show how the final product might look like on the platform. Click on a single municipality to get some useful stats about the forest.
+
+```{r}
+# rejoin with the aoi
+area_metric_spatial <- left_join(aoi, area_metrics_w, by = c("NAME_4" = "plot_id"))
+
+#select some stats to visualise on an interactive map
+content <- list()
+for (i in 1:nrow(area_metric_spatial)){
+    content[[i]] <- 
+        st_drop_geometry(area_metric_spatial)[i,c(40:53)] %>%
+        pivot_longer(everything()) %>% 
+        mutate(value = round(value, 2))
+}
+
+# convert them to html strings (expected by leaflet)
+content2 <- map(content, htmlTable) %>% unlist() 
+```
+
+```{r, fig.height=12, fig.width=12}
+# proof of concept using leaflet
+area_metric_spatial %>%
+    st_transform(4326) %>%
+    leaflet() %>%
+    addTiles() %>%
+    addPolygons(
+        color = "#444444",
+        weight = 1,
+        smoothFactor = 0.5,
+        opacity = 1.0,
+        fillOpacity = 0.5,
+        fillColor = ~ colorQuantile("YlOrRd", landscape_NA_ta)(landscape_NA_ta),
+        highlightOptions = highlightOptions(
+            color = "white",
+            weight = 2,
+            bringToFront = TRUE
+        ),
+        popup = content2
+    )
+
+```
+
+```{r}
+# Andres
+aoi |>
+    st_transform(crs = 4326) |>
+    leaflet() |>
+    addTiles() |>
+    addPolygons(color = "#444444",
+                weight = 1,
+                smoothFactor = 0.5,
+                opacity = 1.0,
+                fillOpacity = 0.5,
+                highlightOptions = highlightOptions(color = "white",
+                                                    weight = 2,
+                                                    bringToFront = TRUE),
+                popup = popupGraph(xx_shape_alheim, width = 300, height = 300)
+    )
+
+
+
+
+```
+
+Source for adding graphs to maps with leaflet: <https://github.com/r-spatial/leafpop> alternative to what I used: addPopupGraphs(list(xx_shape_alheim), group = "xxx", width = 300, height = 400)
