@@ -17,12 +17,11 @@
 #' @examples
 calculate_flm <- function(x,
                           aoi,
+                          ... ,
                           plot_id = NULL,
-                          metrics = c('area', "ca", 'lpi', 'te'),
                           max_area = 1000,
                           class_names,
-                          tempdir = "data/temp",
-                          ...){
+                          tempdir = "data/temp"){
 
     # select metrics
     # metrics = c('area', "ca",  'ta', 'pland',
@@ -32,26 +31,35 @@ calculate_flm <- function(x,
 
     # initial checks
     if(aoi_too_big(aoi, max_area = max_area)) stop("aoi is too big")
-
+    if(missing(plot_id)) plot_id <- NULL
+    if(!is.null(plot_id)) plot_id2 <- dplyr::pull(aoi, !!plot_id)
     gdfR::path_exists(tempdir, create = T)
+    #TODO fix path_exists
     terra::terraOptions(tempdir = tempdir)
+
+    if(!missing(class_names)){
+        if(!all(names(class_names) %in% c("name", "id"))) stop("class_names must be a data frame with columns 'id' and 'name'")
+    }
 
     # load landscape
     landscape <-
-        clip_aoi(x, aoi, ...)
+        clip_aoi(x, aoi)
+
+
 
     # calculate metrics
     area_metrics <-
         sample_lsm(landscape,
                    aoi,
-                   metric = metrics,
-                   plot_id = dplyr::if_else(missing(plot_id), NULL, dplyr::pull(aoi, !!plot_id))
+                   plot_id = plot_id2,
+                   ...
         )
+
 
     if(!missing(class_names)) {
         area_metrics <-
             area_metrics %>%
-            mutate(class = recode(class, !!!setNames(class_names$cover, class_names$id)))
+            mutate(class = recode(class, !!!setNames(class_names$name, class_names$id)))
     }
 
     # outputs
