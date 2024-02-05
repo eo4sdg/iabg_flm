@@ -2,12 +2,13 @@
 #'
 #' Computes forest landscape metrics based on aoi. the input lc is hardcoded.
 #'
-#' @param aoi
-#' @param plot_id
+#' @param aoi shp file with administrative units.
+#' @param plot_id data frame with columns: "id", "name", id matches ids in shp file.
+#'                Integer.  # check names
 #' @param max_area
 #' @param class_names
 #' @param ...
-#' @param x
+#' @param x classified raster
 #' @param metrics
 #' @param tempdir
 #'
@@ -30,9 +31,9 @@ calculate_flm <- function(x,
 
 
     # initial checks
-    if(aoi_too_big(aoi, max_area = max_area)) stop("aoi is too big")
+    # if(aoi_too_big(aoi, max_area = max_area)) stop("aoi is too big")
     if(missing(plot_id)) plot_id <- NULL
-    if(!is.null(plot_id)) plot_id2 <- dplyr::pull(aoi, !!plot_id)
+    if(!is.null(plot_id)) plot_id2 <- dplyr::pull(aoi, {{plot_id}})
     gdfR::path_exists(tempdir, create = T)
     #TODO fix path_exists
     terra::terraOptions(tempdir = tempdir)
@@ -43,13 +44,13 @@ calculate_flm <- function(x,
 
     # load landscape
     landscape <-
-        clip_aoi(x, aoi)
+        clip_aoi(x, aoi) # put outdir
 
 
 
     # calculate metrics
     area_metrics <-
-        sample_lsm(landscape,
+        landscapemetrics::sample_lsm(landscape,
                    aoi,
                    plot_id = plot_id2,
                    ...
@@ -75,7 +76,8 @@ calculate_flm <- function(x,
                   area_metrics_w,
                   by = setNames("plot_id", plot_id))
 
-    return(list(area_metrics, area_metrics_spatial))
+    return(list(area_metrics = area_metrics,
+                area_metrics_spatial = area_metrics_spatial))
     # outputs
         # csv
         # render a rmd file with tables
