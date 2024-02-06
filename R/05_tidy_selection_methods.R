@@ -4,34 +4,9 @@
 library(landscapemetrics)
 library(tidyverse)
 library(corrr)
-# source("R/correlation_matrix.R")
-# library(Hmisc)
-
-
-# All metrics in "landscapemetrics" according by types
-types <-
-    list_lsm() |>
-    select(type, metric) |>
-    distinct(metric, .keep_all = TRUE)
-
 
 # Load data
-df <-
-    read_csv('data/hessen/metrics.csv') |>
-    left_join(types)
-
-# Nest the whole dataset according to the level column
-# m2 <-
-#     df |>
-#     group_by(level) |>
-#     nest()
-
-
-# see the unique landscape names
-unique_landscapes <-
-    df |>
-    select(plot_id) |>
-    unique()
+df <- read_csv('data/hessen/metrics.csv')
 
 # calculate beta and rank by (1) beta and in case of ties by (2) minimum absolute correlation
 calc_beta_rank <- function(df,
@@ -114,7 +89,6 @@ calc_beta_rank <- function(df,
     return(list(ranked_data = out,
                 correlations = correlations,
                 landsc_ = landsc_))
-
 }
 
 # try function
