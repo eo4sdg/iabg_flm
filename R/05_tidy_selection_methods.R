@@ -138,7 +138,13 @@ foo_cor$correlations$corr[[1]] # raw correlation matrix
 foo_cor$correlations$corr_up[[1]] # lower triangular matrix
 foo_cor$correlations$corr_up2[[1]] # averaged with the mean
 
-# lands
+# landscape object
+foo_cor$landsc_
+
+# data is now with all intermediate steps (for debugging)
+foo_cor$ranked_data
+
+
 
 
 
