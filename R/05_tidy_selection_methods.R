@@ -40,7 +40,7 @@ calc_beta_rank <- function(df,
                           df_with_intermediate_steps = FALSE){
     # 0. function input checks
     required_names <- c("layer", "level", "class", "id", "metric", "value",
-                        "plot_id", "percentage_inside", "type")
+                        "plot_id", "percentage_inside")
     if(!inherits(df, "data.frame")) stop("input must be a data.frame")
     if(!all(required_names %in% names(df)))
         stop(paste0("input must contain columns with all of the following names: ",
