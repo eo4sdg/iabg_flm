@@ -6,16 +6,22 @@ library(tidyverse)
 library(corrr)
 
 # Load data
-df <- read_csv('data/hessen/metrics.csv')
+# df <- read_csv('data/hessen/metrics.csv')
+
+# function automatically reads metrics.csv in the tempdir folder
 
 # calculate beta and rank by (1) beta and in case of ties by (2) minimum absolute correlation
 calc_beta_rank <- function(df,
                           correlation = FALSE,
                           landscape = FALSE,
-                          df_with_intermediate_steps = FALSE){
+                          df_with_intermediate_steps = FALSE,
+                          tempdir = "data/temp"){
+    # this function can be completely internal, no need for inputs
+    if(missing(df)) df<- read.csv(file.path(tempdir, "metrics.csv"))
+
     # 0. function input checks
     required_names <- c("layer", "level", "class", "id", "metric", "value",
-                        "plot_id", "percentage_inside")
+                        "plot_id")
     if(!inherits(df, "data.frame")) stop("input must be a data.frame")
     if(!all(required_names %in% names(df)))
         stop(paste0("input must contain columns with all of the following names: ",
@@ -86,6 +92,15 @@ calc_beta_rank <- function(df,
 
     if(!correlation) correlations <- NULL
 
+    # save to csv
+    # the user will download data -> no .rds :(
+    if(save){
+        ## save three objects
+        # make giant csv
+        to_save<- out |>
+            unnest(beta)
+        write.csv(to_save, file = file.path(tempdir, "metrics_ranked.csv"))
+    }
     return(list(ranked_data = out,
                 correlations = correlations,
                 landsc_ = landsc_))
@@ -95,6 +110,7 @@ calc_beta_rank <- function(df,
 
 # basic minimal output
 foo <- calc_beta_rank(df)
+foo$ranked_data
 foo$ranked_data$beta[[1]]
 foo$ranked_data$beta[[27]]
 
