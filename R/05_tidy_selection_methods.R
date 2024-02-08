@@ -94,13 +94,12 @@ calc_beta_rank <- function(df,
 
     # save to csv
     # the user will download data -> no .rds :(
-    if(save){
         ## save three objects
         # make giant csv
-        to_save<- out |>
-            unnest(beta)
-        write.csv(to_save, file = file.path(tempdir, "metrics_ranked.csv"))
-    }
+    to_save<- out |>
+        unnest(beta)
+    write.csv(to_save, file = file.path(tempdir, "metrics_ranked.csv"))
+
     return(list(ranked_data = out,
                 correlations = correlations,
                 landsc_ = landsc_))
