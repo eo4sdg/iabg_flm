@@ -34,7 +34,7 @@ calculate_flm <- function(aoi,
     # if(aoi_too_big(aoi, max_area = max_area)) stop("aoi is too big")
     if(missing(plot_id)) plot_id <- NULL
     if(!is.null(plot_id)) plot_id <- dplyr::pull(aoi, {{plot_id}})
-    gdfR::path_exists(tempdir, create = T)
+    path_exists(tempdir, create = T)
     # TODO fix path_exists
     terra::terraOptions(tempdir = tempdir)
 
