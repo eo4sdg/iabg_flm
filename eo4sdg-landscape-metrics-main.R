@@ -50,7 +50,10 @@ aoi <- sf::st_read(path$aoi)
 polygon_wkt <- "POLYGON ((9.88457 50.504256, 9.88457 50.992839, 10.10744 50.992839, 10.10744 50.504256, 9.88457 50.504256))"
 aoi <- sf::st_as_sfc(polygon_wkt)
 
-
+polygon_wkt_sf <- sf::st_as_sfc(polygon_wkt)
+aoi <- terra::vect(polygon_wkt_sf)
+terra::crs(aoi) <- "EPSG:4326"
+aoi<- st_as_sf(aoi)
 
 ##### Setting the directories --------------------------------------------------
 # worker_dir <- cmd_args[3]
@@ -71,8 +74,8 @@ path$metrics <- file.path(path$proc_dir, "metrics.csv")
 calc_beta_rank(path$metrics)
 path$metrics_ranked <- file.path(path$proc_dir, "metrics_ranked.csv")
 
-##### generate maps of the selected metrics ------------------------------------
-make_metric_maps(path$metrics_ranked)
-path$metrics_maps <- file.path(path$proc_dir, "metrics_maps.Rd") # output tbd
-
-##### end ----------------------------------------------------------------------
+# ##### generate maps of the selected metrics ------------------------------------
+# make_metric_maps()
+# path$metrics_maps <- file.path(path$proc_dir, "metrics_maps.Rd") # output tbd
+#
+# ##### end ----------------------------------------------------------------------

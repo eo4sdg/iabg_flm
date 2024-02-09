@@ -94,5 +94,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # correct up to specified tolerance
     return()
 }
-
+landscape <- terra::unwrap(landscapemetrics::landscape)
+make_metric_maps(landscape = landscape,
+                 plotdir = "out_dir")
 

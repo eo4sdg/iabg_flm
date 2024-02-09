@@ -174,3 +174,25 @@ st_crs_equal <- function (x, y)
   sf::st_crs(x) == sf::st_crs(y)
 }
 
+path_exists<- function (path, check = FALSE, create = TRUE, verbose = FALSE)
+{
+    exists <- dir.exists(path)
+    if (check) {
+        exists
+    }
+    else {
+        if (!exists) {
+            if (create) {
+                fs::dir_create(path)
+                if (verbose)
+                    return(path)
+            }
+            if (!create & verbose)
+                print("Folder does not exist,\n                                    use path_exists(create = TRUE) to create.")
+        }
+        else if (verbose) {
+            path
+        }
+    }
+}
+
