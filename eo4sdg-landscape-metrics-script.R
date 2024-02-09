@@ -1,4 +1,4 @@
-# main.R
+# eo4sdg-landscape-metrics-script.R
 
 # This script executes the forest landscape metrics service.
 
@@ -9,11 +9,22 @@ library(sf)
 library(corrr)
 library(terra)
 
+in_dir <- "in_dir"  # your in_dir folder
+proc_dir <- "proc_dir"  # your proc_dir folder
+# worker_dir <- cmd_args[3]
+out_dir <- "out_dir"  # your out_dir folder
+workflow_dir <- getwd()  # your project folder
+
+##### load functions -----------------------------------------------------------
+source(file.path(workflow_dir, "functions_landscape_metrics.R"))
+source(file.path(workflow_dir, "functions_gdfR.R"))
+
 ##### paths --------------------------------------------------------------------
 # run once for example data acquisition:
 # library(fs)
-# a<- dir_ls("//gdfs06/DATEN09/ESA-EO4SDG_D9/02_analysis/FLM/Hessen/test_data/gitlab_v1", type = "directory")
+# a <- dir_ls("//gdfs06/DATEN09/ESA-EO4SDG_D9/02_analysis/FLM/Hessen/test_data/gitlab_v1", type = "directory")
 # dir_copy(a, new_path = "data")
+
 path <- list(aoi = "data/aoi/aoi_gadm_test.shp",
              raster = "data/hessen/hessen_type_test2.tif",
              tempdir = "data/temp",
@@ -28,9 +39,6 @@ in_dir <- path_create("in_dir")  # your in_dir folder
 proc_dir <- path_create("proc_dir")  # your proc_dir folder
 out_dir <- path_create("out_dir") # your out_dir folder
 workflow_dir <- getwd()  # your project folder
-
-##### load functions -----------------------------------------------------------
-source(file.path(workflow_dir, "functions_landscape_metrics.R"))
 
 ##### calculate forest landscape metrics ---------------------------------------
 calculate_flm(aoi, lc = path$lc_raster, tempdir = proc_dir)
