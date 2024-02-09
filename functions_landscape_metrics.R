@@ -132,36 +132,36 @@ calc_beta_rank <- function(df,
 
     # 1. Beta calculation
     message("calculating beta")
-    beta <- df |>
-        dplyr::group_by(level, plot_id, metric) |>
+    beta <- df %>%
+        dplyr::group_by(level, plot_id, metric) %>%
         dplyr::summarise(min  = min(value),
                   max  = max(value),
-                  beta = (max-min)/max) |>
+                  beta = (max-min)/max) %>%
         dplyr::mutate(rank = min_rank(desc(beta)))
 
     # 2. Correlation matrices (for tiebreaks)
     my_stretch <- function(z){
-        z |>
-            corrr::stretch() |>
-            dplyr::group_by(x) |>
+        z %>%
+            corrr::stretch() %>%
+            dplyr::group_by(x) %>%
             dplyr::summarise(mean = abs(mean(r, na.rm = TRUE)))
     }
     message("calculating correlations")
-    correlations <- df |>
-        dplyr::group_by(level, plot_id) |>
-        dplyr::select(id, class, metric, value) |>
-        tidyr::nest() |>
+    correlations <- df %>%
+        dplyr::group_by(level, plot_id) %>%
+        dplyr::select(id, class, metric, value) %>%
+        tidyr::nest() %>%
         dplyr::mutate(pivoted = map(data, pivot_wider, names_from=metric, values_from=value),
                pivoted = map(pivoted, select, -id, -class),
-               corr    = map(pivoted, correlate)) |>
+               corr    = map(pivoted, correlate)) %>%
         dplyr::mutate(corr_up  = map(corr, shave),
                corr_up2 = map(corr_up, my_stretch))
 
     # 2.1 create landsc_ object
     if(landscape) {
-        landsc_ <- correlations |>
-            dplyr::filter(level == "landscape") |>
-            dplyr::pull(pivoted) |>
+        landsc_ <- correlations %>%
+            dplyr::filter(level == "landscape") %>%
+            dplyr::pull(pivoted) %>%
             dplyr::bind_rows()
     } else{
         landsc_ <- NULL
@@ -170,17 +170,17 @@ calc_beta_rank <- function(df,
     # 2.2 make the tiebreaks from here
     message("starting tiebreaks")
     my_comb_rank <- function(y){
-        y |>
-            dplyr::arrange(dplyr::desc(beta), mean) |>
-            tibble::rowid_to_column("rank_no_ties") |>
+        y %>%
+            dplyr::arrange(dplyr::desc(beta), mean) %>%
+            tibble::rowid_to_column("rank_no_ties") %>%
             dplyr::relocate(rank_no_ties, .after = last_col())
     }
 
     out <-
-        beta |>
-        dplyr::group_by(level, plot_id) |>
-        tidyr::nest(.key = "beta") |>
-        dplyr::left_join(correlations) |>
+        beta %>%
+        dplyr::group_by(level, plot_id) %>%
+        tidyr::nest(.key = "beta") %>%
+        dplyr::left_join(correlations) %>%
         dplyr::mutate(beta2 = purrr::map2(beta, corr_up2, left_join, by = c(metric = "x")),
                beta3 = purrr::map(beta2, my_comb_rank))
 
@@ -188,15 +188,15 @@ calc_beta_rank <- function(df,
     message("formatting output")
     if(!df_with_intermediate_steps){
         out <-
-            out |>
-            dplyr::select(level, plot_id, beta3) |>
+            out %>%
+            dplyr::select(level, plot_id, beta3) %>%
             dplyr::rename(beta = beta3)
     }
 
     if(!correlation) correlations <- NULL
 
     # save to csv
-    to_save<- out |>
+    to_save<- out %>%
         tidyr::unnest(beta)
     write.csv(to_save, file = file.path(tempdir, "metrics_ranked.csv"))
 
@@ -216,7 +216,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     }
 
     types <-
-        landscapemetrics::list_lsm() |>
+        landscapemetrics::list_lsm() %>%
         dplyr::distinct(metric, .keep_all = TRUE)
 
     # landscape <- "input raster with classes"
@@ -224,7 +224,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # reprex
     # for testing
     # landscape <- terra::unwrap(landscapemetrics::landscape)
-    # landscape <- terra::rast(path$raster) |> subst(NA, -9999)
+    # landscape <- terra::rast(path$raster) %>% subst(NA, -9999)
     # create a spatial raster with patch id and LSM values --------------------
     # remove na
     landscape<- terra::subst(landscape, NA, -9999)
@@ -246,11 +246,11 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     ms2 <- c(patches, landscape, ms)
 
     # generate a pdf of the maps -----------------------------------------------
-    names <- ms2 |>
-        names() |>
-        tibble::tibble() |>
-        setNames("function_name") |>
-        dplyr::left_join(types) |>
+    names <- ms2 %>%
+        names() %>%
+        tibble::tibble() %>%
+        setNames("function_name") %>%
+        dplyr::left_join(types) %>%
         dplyr::mutate(plot_name = ifelse(is.na(name), function_name, name))
 
     #specify path to save PDF to
@@ -273,14 +273,14 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # adding info from type to join later with m
     # add
     # ms3 <-
-    #     ms2 |>
-    #     tibble::as_tibble() |>
-    #     tidyr::pivot_longer(c(-id, -clumps), names_to = "function_name", values_to = "value_s") |>
+    #     ms2 %>%
+    #     tibble::as_tibble() %>%
+    #     tidyr::pivot_longer(c(-id, -clumps), names_to = "function_name", values_to = "value_s") %>%
     #     dplyr::left_join(types)
     #
     # ms4 <-
-    #     ms3 |>
-    #     dplyr::group_by(id, function_name, level, metric) |>
+    #     ms3 %>%
+    #     dplyr::group_by(id, function_name, level, metric) %>%
     #     dplyr::summarise(value_s = max(value_s, na.rm = TRUE))
     #
     # # create tabular version of LSM  ------------------------------------------
@@ -289,10 +289,10 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # # joining to check if the outputs from calculate_lsm()
     # # and spatialize_lsm() are identical
     # foo<-
-    #     m |>
-    #     dplyr::left_join(ms4) |>
+    #     m %>%
+    #     dplyr::left_join(ms4) %>%
     #     dplyr::mutate(check = dplyr::near(value, value_s, tol = .00001))
-    # foo |> dplyr::pull(check) |> table()
+    # foo %>% dplyr::pull(check) %>% table()
     # correct up to specified tolerance
     return()
 }
