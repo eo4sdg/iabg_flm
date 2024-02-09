@@ -206,13 +206,16 @@ calc_beta_rank <- function(df,
 }
 
 make_metric_maps<- function(landscape,# classified landscape, with NO NA's
-                            metrics, # which metrics to plot NOT IMPLEMENTED
                             aoi, # ideally with administrative subdivisions, NOT IMPLEMENTED
+                            metrics, # which metrics to plot NOT IMPLEMENTED
                             tempdir = "data/temp", # where should temp data be saved
                             plotdir,
                             ...){ # NOT IMPLEMENTED: extra arguments for writeRaster
     if(inherits(landscape, "character")){
-        landscape<- terra::rast(landscape)
+        landscape <- terra::rast(landscape)
+        landscape <- terra::crop(landscape,
+                                 terra::project(terra::vect(aoi),
+                                                terra::crs(landscape)))
     }
 
     types <-
