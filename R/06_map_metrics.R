@@ -5,7 +5,7 @@ library(tidyverse)
 # specify tempdir because next functions only write to
 # tempdir
 
-make_metric_maps<- function(landscape,# classified landscape, with NO NA's
+make_metric_maps<- function(landscape,# classified landscape dir, with NO NA's
                             metrics, # which metrics to plot NOT IMPLEMENTED
                             aoi, # ideally with administrative subdivisions, NOT IMPLEMENTED
                             tempdir = "data/temp", # where should temp data be saved

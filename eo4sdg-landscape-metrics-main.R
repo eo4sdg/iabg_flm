@@ -75,7 +75,7 @@ calc_beta_rank(path$metrics)
 path$metrics_ranked <- file.path(path$proc_dir, "metrics_ranked.csv")
 
 # ##### generate maps of the selected metrics ------------------------------------
-# make_metric_maps()
-# path$metrics_maps <- file.path(path$proc_dir, "metrics_maps.Rd") # output tbd
-#
+make_metric_maps(landscape = path$lc_raster, plotdir = out_dir)
+path$metrics_maps <- file.path(out_dir, "plots.R") # output tbd
+
 # ##### end ----------------------------------------------------------------------

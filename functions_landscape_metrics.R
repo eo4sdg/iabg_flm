@@ -211,7 +211,9 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                             tempdir = "data/temp", # where should temp data be saved
                             plotdir,
                             ...){ # NOT IMPLEMENTED: extra arguments for writeRaster
-
+    if(inherits(landscape, "character")){
+        landscape<- terra::rast(landscape)
+    }
 
     types <-
         landscapemetrics::list_lsm() |>
