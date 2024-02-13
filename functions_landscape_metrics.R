@@ -201,9 +201,10 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                             ...){ # NOT IMPLEMENTED: extra arguments for writeRaster
     if(inherits(landscape, "character")){
         landscape <- terra::rast(landscape)
+        aoi<- terra::project(terra::vect(aoi),
+                       terra::crs(landscape))
         landscape <- terra::crop(landscape,
-                                 terra::project(terra::vect(aoi),
-                                                terra::crs(landscape)))
+                                 aoi)
     }
 
     types <-
@@ -247,15 +248,17 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     #specify path to save PDF to
     destination <- file.path(plotdir, "plots.pdf")
     message("creating plots in pdf")
+    dev.cur()
     #open PDF
-    pdf(file=destination)
-
+    cairo_pdf(file=destination)
+    dev.cur()
     #specify to save plots in 2x2 grid
     par(mfrow = c(2,2))
 
     #save plots to PDF
     for (i in 1:length(names)) {
-        print(plot(ms2[[i]],main = names$plot_name[i]))
+        plot(ms2[[i]],main = names$plot_name[i])
+        plot(aoi, add = TRUE)
     }
     par(mfrow = c(1,1))
     #turn off PDF plotting
