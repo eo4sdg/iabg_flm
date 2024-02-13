@@ -21,55 +21,18 @@ library(terra)
 # out_dir <- cmd_args[4]
 # workflow_dir <- cmd_args[5]
 
+########################### F- TEP #############################################
+glc_folders_eodata <- system("find /eodata/CLMS/Global/Vegetation/Global_Land_Cover/ -maxdepth 2 -type d", intern = TRUE)
+
+##### Setting the directories --------------------------------------------------
 in_dir <- "in_dir"  # your in_dir folder
 proc_dir <- "proc_dir"  # your proc_dir folder
 # worker_dir <- cmd_args[3]
 out_dir <- "out_dir"  # your out_dir folder
 workflow_dir <- getwd()  # your project folder
+########################### END F- TEP #########################################
 
-path <- list(aoi = "data/aoi/aoi_gadm_test.shp", ## we can switch it to WKT POLYGON?
-             proc_dir = proc_dir, # change it to proc_dir, actually we can delete it
-             file.path(out_dir, "output_files")) # change the path to PROBAV_LC100_global_v3.0.1_2015-base_Forest-Type-layer_EPSG-4326.tif
-
-
-##### load functions -----------------------------------------------------------
-source(file.path(workflow_dir, "functions_landscape_metrics.R"))
-source(file.path(workflow_dir, "functions_gdfR.R"))
-
-##### paths --------------------------------------------------------------------
-# run once for example data acquisition:
-# library(fs)
-# a <- dir_ls("//gdfs06/DATEN09/ESA-EO4SDG_D9/02_analysis/FLM/Hessen/test_data/gitlab_v1", type = "directory")
-# dir_copy(a, new_path = "data")
-
-##### Setting the directories --------------------------------------------------
-# worker_dir <- cmd_args[3]
-in_dir <- path_create("in_dir")  # your in_dir folder
-proc_dir <- path_create("proc_dir")  # your proc_dir folder
-out_dir <- path_create("out_dir") # your out_dir folder
-workflow_dir <- getwd()  # your project folder
-
-
-polygon_wkt <- "POLYGON ((9.98457 50.554256, 9.98457 50.602839, 10.05744 50.602839, 10.05744 50.554256, 9.98457 50.554256))"
-polygon_wkt_sf <- sf::st_as_sfc(polygon_wkt)
-aoi <- terra::vect(polygon_wkt_sf)
-terra::crs(aoi) <- "EPSG:4326"
-aoi<- sf::st_as_sf(aoi)
-
-##########################################################################################################################################################
-# Load functions from R scripts -------------------------------------------
-source(file.path(workflow_dir, "functions_download_forest_mask.R"))
-source(file.path(workflow_dir, "functions_dir_management.R"))
-output_images_path <- file.path(out_dir, "output_images")
-
-create_dir(output_images_path)
-
-########################### F- TEP ############################################
-glc_folders_eodata <- system("find /eodata/CLMS/Global/Vegetation/Global_Land_Cover/ -maxdepth 2 -type d", intern = TRUE)
-
-########################### END F- TEP ############################################
 ########################### LOCALLY ############################################
-
 list_directories <- function(base_dir, max_depth = 1) {
     if (max_depth < 1) return(base_dir)
     dirs <- list.files(base_dir, full.names = TRUE, recursive = FALSE, include.dirs = TRUE)
@@ -83,9 +46,41 @@ list_directories <- function(base_dir, max_depth = 1) {
 
 glc_folders_eodata <- list_directories("D:/EO4SDG/codes/LM/eo4sdg-forest-flm/eodata/CLMS/Global/Vegetation/Global_Land_Cover", max_depth = 1)
 glc_folders_eodata
-########################### END LOCALLY ############################################
+##### Setting the directories --------------------------------------------------
+# worker_dir <- cmd_args[3]
+in_dir <- path_create("in_dir")  # your in_dir folder
+proc_dir <- path_create("proc_dir")  # your proc_dir folder
+out_dir <- path_create("out_dir") # your out_dir folder
+workflow_dir <- getwd()  # your project folder
+########################### END LOCALLY ########################################
 
-############################### CODE TO GET FOREST MASK TILES ######################################
+
+path <- list(aoi = "data/aoi/aoi_gadm_test.shp", ## we can switch it to WKT POLYGON?
+             proc_dir = proc_dir, # change it to proc_dir, actually we can delete it
+             file.path(out_dir, "output_files")) # change the path to PROBAV_LC100_global_v3.0.1_2015-base_Forest-Type-layer_EPSG-4326.tif
+
+
+##### load functions -----------------------------------------------------------
+
+source(file.path(workflow_dir, "functions_landscape_metrics.R"))
+source(file.path(workflow_dir, "functions_gdfR.R"))
+
+
+polygon_wkt <- "POLYGON ((9.98457 50.554256, 9.98457 50.602839, 10.05744 50.602839, 10.05744 50.554256, 9.98457 50.554256))"
+polygon_wkt_sf <- sf::st_as_sfc(polygon_wkt)
+aoi <- terra::vect(polygon_wkt_sf)
+terra::crs(aoi) <- "EPSG:4326"
+aoi<- sf::st_as_sf(aoi)
+
+# Load functions from R scripts ------------------------------------------------
+source(file.path(workflow_dir, "functions_download_forest_mask.R"))
+source(file.path(workflow_dir, "functions_dir_management.R"))
+output_images_path <- file.path(out_dir, "output_images")
+
+create_dir(output_images_path)
+
+
+############################### CODE TO GET FOREST MASK TILES ##################
 
 library(stringr)
 
@@ -107,10 +102,10 @@ print("blablabla")
 print(files)
 
 
-############################### END CODE TO GET FOREST MASK TILES ######################################
-##########################################################################################################################################################
+########################### END CODE TO GET FOREST MASK TILES ##################
+################################################################################
 
-
+########################## LANDSCAPE METRICS ###################################
 
 path <- list(proc_dir = proc_dir, # change it to proc_dir, actually we can delete it
              lc_raster = "//gdfs06/DATEN09/ESA-EO4SDG_D9/01_inputData/openData/raster/PROBAV_LC100/PROBAV_LC100_global_v3.0.1_2015-base_Forest-Type-layer_EPSG-4326.tif",
@@ -124,9 +119,10 @@ path$metrics <- file.path(out_dir, "metrics.csv")
 calc_beta_rank(df = path$metrics, outdir = out_dir)
 path$metrics_ranked <- file.path(path$proc_dir, "metrics_ranked.csv")
 
-# ##### generate maps of the selected metrics ------------------------------------
+# ##### generate maps of the selected metrics ----------------------------------
 make_metric_maps(landscape = path$lc_raster, aoi = aoi, plotdir = out_dir)
 path$metrics_maps <- file.path(out_dir, "plots.R") # output tbd
 
-# ##### end ----------------------------------------------------------------------
+# ##### end --------------------------------------------------------------------
+########################## END LANDSCAPE METRICS ###############################
 
