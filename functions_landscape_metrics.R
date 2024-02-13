@@ -119,7 +119,7 @@ calc_beta_rank <- function(df,
                            df_with_intermediate_steps = FALSE,
                            outdir = "data/temp"){
     # this function can be completely internal, no need for inputs
-    if(inherits(df, "character")) df<- read.csv(file.path(tempdir, "metrics.csv"))
+    if(inherits(df, "character")) df<- read.csv(file.path(outdir, "metrics.csv"))
 
     # 0. function input checks
     required_names <- c("layer", "level", "class", "id", "metric", "value",
@@ -246,7 +246,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
 
     #specify path to save PDF to
     destination <- file.path(plotdir, "plots.pdf")
-
+    message("creating plots in pdf")
     #open PDF
     pdf(file=destination)
 
@@ -255,7 +255,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
 
     #save plots to PDF
     for (i in 1:length(names)) {
-        plot(ms2[[i]],main = names$plot_name[i])
+        print(plot(ms2[[i]],main = names$plot_name[i]))
     }
     par(mfrow = c(1,1))
     #turn off PDF plotting

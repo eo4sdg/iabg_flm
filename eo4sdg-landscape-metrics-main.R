@@ -58,7 +58,7 @@ path <- list(proc_dir = proc_dir, # change it to proc_dir, actually we can delet
 
 ##### calculate forest landscape metrics ---------------------------------------
 calculate_flm(aoi, lc = path$lc_raster, tempdir = path$proc_dir, outdir = out_dir)
-path$metrics <- file.path(path$proc_dir, "metrics.csv")
+path$metrics <- file.path(out_dir, "metrics.csv")
 
 ##### apply selection methods --------------------------------------------------
 calc_beta_rank(df = path$metrics, outdir = out_dir)
