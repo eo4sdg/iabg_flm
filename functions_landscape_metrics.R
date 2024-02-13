@@ -22,7 +22,8 @@ calculate_flm <- function(aoi,
                           plot_id = NULL,
                           max_area = 1000,
                           class_names,
-                          tempdir = "data/temp"){
+                          tempdir = "data/temp",
+                          outdir){
 
     # select metrics
     # metrics = c('area', "ca",  'ta', 'pland',
@@ -69,7 +70,7 @@ calculate_flm <- function(aoi,
     }
 
     #the object area metrics is the one used in script 4
-    write.csv(area_metrics, file = file.path(tempdir, "metrics.csv")) #
+    write.csv(area_metrics, file = file.path(outdir, "metrics.csv")) #
 
 
     # outputs
@@ -93,7 +94,7 @@ calculate_flm <- function(aoi,
     # # outputs
     # csv
     # render a rmd file with tables
-    #
+
 }
 
 #' Calculate beta and rank accordingly
@@ -106,7 +107,6 @@ calculate_flm <- function(aoi,
 #'
 #' @param df metrics csv or data frame derived from calculate flm function
 #' @param correlation logical. Return correlation matrices?
-#' @param landscape logical. Return landscape object?
 #' @param df_with_intermediate_steps logical. Return intermediate steps?
 #' @param tempdir character. Folder where the temporary files should be created.
 #'
@@ -116,11 +116,10 @@ calculate_flm <- function(aoi,
 #' @examples
 calc_beta_rank <- function(df,
                            correlation = FALSE,
-                           landscape = FALSE,
                            df_with_intermediate_steps = FALSE,
-                           tempdir = "data/temp"){
+                           outdir = "data/temp"){
     # this function can be completely internal, no need for inputs
-    if(inherits(df, "character")) df<- read.csv(file.path(tempdir, "metrics.csv"))
+    if(inherits(df, "character")) df<- read.csv(file.path(outdir, "metrics.csv"))
 
     # 0. function input checks
     required_names <- c("layer", "level", "class", "id", "metric", "value",
@@ -157,17 +156,7 @@ calc_beta_rank <- function(df,
         dplyr::mutate(corr_up  = map(corr, shave),
                corr_up2 = map(corr_up, my_stretch))
 
-    # 2.1 create landsc_ object
-    if(landscape) {
-        landsc_ <- correlations %>%
-            dplyr::filter(level == "landscape") %>%
-            dplyr::pull(pivoted) %>%
-            dplyr::bind_rows()
-    } else{
-        landsc_ <- NULL
-    }
-
-    # 2.2 make the tiebreaks from here
+    # 2.1 make the tiebreaks from here
     message("starting tiebreaks")
     my_comb_rank <- function(y){
         y %>%
@@ -198,11 +187,10 @@ calc_beta_rank <- function(df,
     # save to csv
     to_save<- out %>%
         tidyr::unnest(beta)
-    write.csv(to_save, file = file.path(tempdir, "metrics_ranked.csv"))
+    write.csv(to_save, file = file.path(outdir, "metrics_ranked.csv"))
 
     return(list(ranked_data = out,
-                correlations = correlations,
-                landsc_ = landsc_))
+                correlations = correlations))
 }
 
 make_metric_maps<- function(landscape,# classified landscape, with NO NA's
@@ -258,7 +246,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
 
     #specify path to save PDF to
     destination <- file.path(plotdir, "plots.pdf")
-
+    message("creating plots in pdf")
     #open PDF
     pdf(file=destination)
 
@@ -267,7 +255,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
 
     #save plots to PDF
     for (i in 1:length(names)) {
-        plot(ms2[[i]],main = names$plot_name[i])
+        print(plot(ms2[[i]],main = names$plot_name[i]))
     }
     par(mfrow = c(1,1))
     #turn off PDF plotting
