@@ -27,6 +27,11 @@ proc_dir <- "proc_dir"  # your proc_dir folder
 out_dir <- "out_dir"  # your out_dir folder
 workflow_dir <- getwd()  # your project folder
 
+path <- list(aoi = "data/aoi/aoi_gadm_test.shp", ## we can switch it to WKT POLYGON?
+             proc_dir = proc_dir, # change it to proc_dir, actually we can delete it
+             file.path(out_dir, "output_files")) # change the path to PROBAV_LC100_global_v3.0.1_2015-base_Forest-Type-layer_EPSG-4326.tif
+
+
 ##### load functions -----------------------------------------------------------
 source(file.path(workflow_dir, "functions_landscape_metrics.R"))
 source(file.path(workflow_dir, "functions_gdfR.R"))
@@ -49,7 +54,62 @@ polygon_wkt <- "POLYGON ((9.98457 50.554256, 9.98457 50.602839, 10.05744 50.6028
 polygon_wkt_sf <- sf::st_as_sfc(polygon_wkt)
 aoi <- terra::vect(polygon_wkt_sf)
 terra::crs(aoi) <- "EPSG:4326"
-aoi<- st_as_sf(aoi)
+aoi<- sf::st_as_sf(aoi)
+
+##########################################################################################################################################################
+# Load functions from R scripts -------------------------------------------
+source(file.path(workflow_dir, "functions_download_forest_mask.R"))
+source(file.path(workflow_dir, "functions_dir_management.R"))
+output_images_path <- file.path(out_dir, "output_images")
+
+create_dir(output_images_path)
+
+########################### F- TEP ############################################
+glc_folders_eodata <- system("find /eodata/CLMS/Global/Vegetation/Global_Land_Cover/ -maxdepth 2 -type d", intern = TRUE)
+
+########################### END F- TEP ############################################
+########################### LOCALLY ############################################
+
+list_directories <- function(base_dir, max_depth = 1) {
+    if (max_depth < 1) return(base_dir)
+    dirs <- list.files(base_dir, full.names = TRUE, recursive = FALSE, include.dirs = TRUE)
+    dirs <- dirs[dir.exists(dirs)] # Keep only directories
+    if (max_depth == 1) return(dirs)
+    for (dir in dirs) {
+        dirs <- c(dirs, list_directories(dir, max_depth - 1))
+    }
+    return(dirs)
+}
+
+glc_folders_eodata <- list_directories("D:/EO4SDG/codes/LM/eo4sdg-forest-flm/eodata/CLMS/Global/Vegetation/Global_Land_Cover", max_depth = 1)
+glc_folders_eodata
+########################### END LOCALLY ############################################
+
+############################### CODE TO GET FOREST MASK TILES ######################################
+
+library(stringr)
+
+### USER INPUT #################################
+specified_year <- "2019"
+crs_wkt <- 4326
+### END USER INPUT #############################
+
+print(path$proc_dir)
+
+glc_forest_tiles <- path_to_glc_forest_tiles(glc_folders_eodata, polygon_wkt, crs_wkt, specified_year)
+print(glc_forest_tiles)
+output_filename <- "PROBAV_LC100_global_v3.0.1_2019_merged.tif"
+output_path <- file.path(path$procdir, output_filename)
+
+merge_raster_from_paths(glc_forest_tiles, output_path)
+files <- list.files(path = path$procdir)
+print("blablabla")
+print(files)
+
+
+############################### END CODE TO GET FOREST MASK TILES ######################################
+##########################################################################################################################################################
+
 
 
 path <- list(proc_dir = proc_dir, # change it to proc_dir, actually we can delete it
