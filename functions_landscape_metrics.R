@@ -202,12 +202,18 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                             ...){ # NOT IMPLEMENTED: extra arguments for writeRaster
     if(inherits(landscape, "character")){
         landscape <- terra::rast(landscape)
-        aoi<- terra::project(terra::vect(aoi),
-                       terra::crs(landscape))
-        landscape <- terra::crop(landscape,
-                                 aoi)
+
     }
+    aoi<- terra::project(terra::vect(aoi),
+                         terra::crs(landscape))
+    landscape <- terra::crop(landscape,
+                             aoi)
     landscape <- project_to_m(landscape)
+
+    # remove na
+    landscape<- terra::subst(landscape, NA, -9999)
+
+    to_mask_for_plot<- ifel(landscape == -9999, NA,1)
 
     types <-
         landscapemetrics::list_lsm() %>%
@@ -220,15 +226,14 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # landscape <- terra::unwrap(landscapemetrics::landscape)
     # landscape <- terra::rast(path$raster) %>% subst(NA, -9999)
     # create a spatial raster with patch id and LSM values --------------------
-    # remove na
-    landscape<- terra::subst(landscape, NA, -9999)
+
     patches <- landscapemetrics::get_patches(landscape, to_disk = TRUE)
 
     # this reduction is performed in memory!
     patches <- setNames(Reduce(cover, patches$layer_1), "id")
 
     # level should be user specified (e.g based on the beta selection method Andres)
-    ms <- landscapemetrics::spatialize_lsm(landscape, level = "patch", to_disk = TRUE)
+    ms <- spatialize_lsm(landscape, level = "patch", to_disk = TRUE)
 
     # for the hessen example, to_disk = TRUE throws error:
     # Error: [writeValues] too few values for writing: 5312856 < 11153310
@@ -250,16 +255,15 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     #specify path to save PDF to
     destination <- file.path(plotdir, "plots.pdf")
     message("creating plots in pdf")
-    dev.cur()
-    #open PDF
-    par(mfrow = c(2,2))
     pdf(file=destination)
-    dev.cur()
+
     #specify to save plots in 2x2 grid
+    par(mfrow = c(2,2))
 
     #save plots to PDF
     for (i in 1:length(names)) {
-        plot(ms2[[i]],main = names$plot_name[i])
+        tmp<- ms2[[i]] |> mask(to_mask_for_plot)
+        plot(tmp,main = names$plot_name[i])
         plot(aoi, add = TRUE)
     }
     par(mfrow = c(1,1))

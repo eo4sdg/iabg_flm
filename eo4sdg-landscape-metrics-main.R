@@ -121,7 +121,7 @@ path$metrics_ranked <- file.path(path$proc_dir, "metrics_ranked.csv")
 
 # ##### generate maps of the selected metrics ----------------------------------
 make_metric_maps(landscape = path$lc_raster, aoi = aoi, plotdir = out_dir)
-path$metrics_maps <- file.path(out_dir, "plots.R") # output tbd
+path$metrics_maps <- file.path(out_dir, "plots.pdf") # output tbd
 
 # ##### end --------------------------------------------------------------------
 ########################## END LANDSCAPE METRICS ###############################
