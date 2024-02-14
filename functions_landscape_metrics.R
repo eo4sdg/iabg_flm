@@ -250,10 +250,10 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     message("creating plots in pdf")
     dev.cur()
     #open PDF
-    cairo_pdf(file=destination)
+    par(mfrow = c(2,2))
+    pdf(file=destination)
     dev.cur()
     #specify to save plots in 2x2 grid
-    par(mfrow = c(2,2))
 
     #save plots to PDF
     for (i in 1:length(names)) {
@@ -289,4 +289,14 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # foo %>% dplyr::pull(check) %>% table()
     # correct up to specified tolerance
     return()
+}
+
+project_to_m<- function(x){
+    if(landscapemetrics::check_landscape(x)$units != "m"){
+        project(x, "epsg:6933", method = "near")
+    } else{ # dont change anything if already in m
+        x
+    }
+
+    # https://nsidc.org/data/user-resources/help-center/guide-ease-grids
 }
