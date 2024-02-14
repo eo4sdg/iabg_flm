@@ -56,6 +56,7 @@ calculate_flm <- function(aoi,
                       filename = file.path(tempdir, "lc_from_aoi.tif"),
                       overwrite = TRUE)
 
+    landscape <- project_to_m(landscape)
 
     # calculate metrics
     area_metrics <-
@@ -206,6 +207,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
         landscape <- terra::crop(landscape,
                                  aoi)
     }
+    landscape <- project_to_m(landscape)
 
     types <-
         landscapemetrics::list_lsm() %>%
