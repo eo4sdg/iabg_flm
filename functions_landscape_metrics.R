@@ -202,18 +202,25 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                             ...){ # NOT IMPLEMENTED: extra arguments for writeRaster
     if(inherits(landscape, "character")){
         landscape <- terra::rast(landscape)
-
     }
     aoi<- terra::project(terra::vect(aoi),
                          terra::crs(landscape))
     landscape <- terra::crop(landscape,
-                             aoi)
-    landscape <- project_to_m(landscape)
+                             aoi,
+                             filename = file.path(tempdir, "landscape_crop.tif"),
+                             overwrite = TRUE)
+    # get only forest classes
+    landscape<- select_forest_from_glc_lcc(landscape, tempdir = tempdir, binary = FALSE)
+    landscape <- project_to_m(landscape, tempdir = tempdir)
 
-    # remove na
-    landscape<- terra::subst(landscape, NA, -9999)
+    # remove na # ALREADY DONE ABOVE in select_forest_from_glc_lcc
+    # landscape<- terra::subst(landscape, NA, -9999,
+    #                          filename = file.path(tempdir, "landscape_no_NA.tif"),
+    #                          overwrite = TRUE)
 
-    to_mask_for_plot<- ifel(landscape == -9999, NA,1)
+    to_mask_for_plot<- terra::ifel(landscape == -9999, NA,1,
+                                   filename = file.path(tempdir, "landscape_to_mask.tif"),
+                                   overwrite = TRUE)
 
     types <-
         landscapemetrics::list_lsm() %>%
@@ -230,10 +237,16 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     patches <- landscapemetrics::get_patches(landscape, to_disk = TRUE)
 
     # this reduction is performed in memory!
-    patches <- setNames(Reduce(cover, patches$layer_1), "id")
+    # patches <- setNames(Reduce(cover, patches$layer_1), "id")
+
+    # this reduction is performed out of memory! confirmed equal ouptut
+    patches <- patches |> unlist() |> sprc() |>
+        merge(filename = file.path(tempdir, "patches.tif"),
+              overwrite = TRUE,
+              names = "id")
 
     # level should be user specified (e.g based on the beta selection method Andres)
-    ms <- spatialize_lsm(landscape, level = "patch", to_disk = TRUE)
+    ms <- landscapemetrics::spatialize_lsm(landscape, level = "patch", to_disk = TRUE)
 
     # for the hessen example, to_disk = TRUE throws error:
     # Error: [writeValues] too few values for writing: 5312856 < 11153310
@@ -255,6 +268,8 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     #specify path to save PDF to
     destination <- file.path(plotdir, "plots.pdf")
     message("creating plots in pdf")
+
+    # adm_bound<- gadm("", path = tempdir)
     pdf(file=destination)
 
     #specify to save plots in 2x2 grid
@@ -262,9 +277,15 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
 
     #save plots to PDF
     for (i in 1:length(names)) {
-        tmp<- ms2[[i]] |> mask(to_mask_for_plot)
-        plot(tmp,main = names$plot_name[i])
+        tmp_name <- names$plot_name[i] |> gsub(" ", "_", x = _)
+        tmp <- ms2[[i]] |>
+            terra::mask(to_mask_for_plot,
+                        filename = file.path(plotdir, tmp_name) |>
+                            fs::path_ext_set("tif"),
+                        overwrite = TRUE)
+        plot(tmp,main = tmp_name)
         plot(aoi, add = TRUE)
+        # plot(adm_bound, add = TRUE, lwd = 2.5)
     }
     par(mfrow = c(1,1))
     #turn off PDF plotting
@@ -297,9 +318,14 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     return()
 }
 
-project_to_m<- function(x){
+project_to_m<- function(x, tempdir = "data/temp"){
+
     if(landscapemetrics::check_landscape(x)$units != "m"){
-        project(x, "epsg:6933", method = "near")
+        # wh_utm <- utm_zone(x) ##TODO!
+        wh_epsg <- "epsg:6933"
+        terra::project(x, wh_epsg, method = "near",
+                filename = file.path(tempdir, "landscape_crop_project_m.tif"),
+                overwrite = TRUE)
     } else{ # dont change anything if already in m
         x
     }
@@ -327,12 +353,15 @@ select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE)
                          "-9999" = "no_forest") |>
         list(. = _) |> with(data.frame(ID = as.numeric(names(.)), category = .))
     if(binary){
-        out<- ifel(x %in% forest_map_code$ID, 1, 0,
-                   filename = file.path(tempdir, "forest_mask.tif"))
+        out<- terra::ifel(x %in% forest_map_code$ID, 1, 0,
+                   filename = file.path(tempdir, "forest_mask.tif"),
+                   overwrite = TRUE)
     } else{
-        out<- ifel(x %in% forest_map_code$ID, x, -9999,
-                   filename = file.path(tempdir, "forest_mask.tif")) |>
-            categories(value = forest_map_code)
+        out<- terra::ifel(x %in% forest_map_code$ID, x, -9999,
+                   filename = file.path(tempdir, "forest_mask_tmp.tif"),
+                   overwrite = TRUE) |>
+            terra::categories(value = forest_map_code) |>
+            terra::writeRaster("forest_mask.tif", overwrite = TRUE)
     }
 
     return(out)
