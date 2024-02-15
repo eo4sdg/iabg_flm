@@ -19,7 +19,7 @@
 calculate_flm <- function(aoi,
                           lc,
                           ... ,
-                          plot_id = NULL,
+                          plot_id,
                           max_area = 1000,
                           class_names,
                           tempdir = "data/temp",
@@ -76,23 +76,27 @@ calculate_flm <- function(aoi,
 
 
     # outputs
-    # area_metrics_w <-
-    #     area_metrics %>%
-    #     dplyr::filter(level != 'patch') %>%
-    #     dplyr::pivot_wider(id_cols     = plot_id,
-    #                 names_from  = c("level", 'class', 'metric'),
-    #                 values_from = value)
+    if(!is.null(plot_id)){
+        area_metrics_w <-
+            area_metrics %>%
+            dplyr::filter(level != 'patch') %>%
+            dplyr::pivot_wider(id_cols     = plot_id,
+                               names_from  = c("level", 'class', 'metric'),
+                               values_from = value)
 
-    # area_metrics_spatial <-
-    #     left_join(aoi,
-    #               area_metrics_w,
-    #               by = setNames("plot_id", plot_id))
-    # DOES NOT WORK IF plot_id NOT PROVIDED FROM BEGINNING
+        area_metrics_spatial <-
+            left_join(aoi,
+                      area_metrics_w,
+                      by = setNames("plot_id", plot_id))
+        # DOES NOT WORK IF plot_id NOT PROVIDED FROM BEGINNING
+        write.csv(area_metrics_spatial, file = file.path(outdir, "metrics_spatial.csv")) #
 
-    #return metrics
-    # return(list(area_metrics = area_metrics,
-    #             area_metrics_spatial = area_metrics_spatial))
-    return(area_metrics)
+        #return metrics
+        return(list(area_metrics = area_metrics,
+                    area_metrics_spatial = area_metrics_spatial))
+    }
+
+        return(area_metrics)
     # # outputs
     # csv
     # render a rmd file with tables
