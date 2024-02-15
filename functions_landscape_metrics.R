@@ -56,7 +56,7 @@ calculate_flm <- function(aoi,
                       filename = file.path(tempdir, "lc_from_aoi.tif"),
                       overwrite = TRUE)
 
-    landscape <- project_to_m(landscape)
+    landscape <- project_to_m(landscape, tempdir = tempdir)
     aoi<- sf::st_transform(aoi, terra::crs(landscape))
 
     # calculate metrics
