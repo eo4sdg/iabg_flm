@@ -57,6 +57,7 @@ calculate_flm <- function(aoi,
                       overwrite = TRUE)
 
     landscape <- project_to_m(landscape)
+    aoi<- sf::st_transform(aoi, terra::crs(landscape))
 
     # calculate metrics
     area_metrics <-
@@ -212,6 +213,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # get only forest classes
     landscape<- select_forest_from_glc_lcc(landscape, tempdir = tempdir, binary = FALSE)
     landscape <- project_to_m(landscape, tempdir = tempdir)
+    aoi<- terra::project(aoi, terra::crs(landscape))
 
     # remove na # ALREADY DONE ABOVE in select_forest_from_glc_lcc
     # landscape<- terra::subst(landscape, NA, -9999,
