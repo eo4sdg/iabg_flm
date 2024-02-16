@@ -242,7 +242,7 @@ setMethod("utm_zone", signature("Spatial", "missing"),
 #' @rdname utm_zone
 #' @importFrom sf st_centroid st_coordinates
 #' @aliases utm_zone,Spatial,missing,logical-method
-setMethod("utm_zone", signature(x='sf', y='missing'),
+setMethod("utm_zone", signature(x="sf", y="missing"),
           function(x, proj4string) {
               x <- sf::st_transform(x, 4236)
               centroid <- sf::st_coordinates(sf::st_centroid(x))
@@ -250,9 +250,16 @@ setMethod("utm_zone", signature(x='sf', y='missing'),
           }
 )
 
-setMethod("utm_zone", signature(x='SpatRaster', y='missing'),
+setMethod("utm_zone", signature(x="SpatRaster", y="missing"),
           function(x, proj4string) {
-              centroid<- x |> ext() |> (function(x) {c((x[1] + x[2])/2, ((x[3] + x[4])/2))})()
+              centroid<- x |> terra::ext() |> (function(x) {c((x[1] + x[2])/2, ((x[3] + x[4])/2))})()
               return(gfcanalysis::utm_zone(centroid[1], centroid[2], proj4string))
           }
 )
+
+st_where_is <- function (x, desc = "NAME_0", tempdir) {
+    world<- geodata::world(path = tempdir)
+    sf_use_s2(FALSE) # NEEDED!!
+    if (!st_crs_equal(x, world)) x <- sf::st_transform(x, sf::st_crs(world))
+    sf::st_drop_geometry(sf::st_intersection(sf::st_as_sf(world), x)[, desc])
+}

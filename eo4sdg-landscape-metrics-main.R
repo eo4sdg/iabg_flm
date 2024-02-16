@@ -123,12 +123,25 @@ path$metrics <- file.path(out_dir, "metrics.csv")
 
 ##### apply selection methods --------------------------------------------------
 calc_beta_rank(df = path$metrics, outdir = out_dir)
-path$metrics_ranked <- file.path(path$proc_dir, "metrics_ranked.csv")
+path$metrics_ranked <- file.path(out_dir, "metrics_ranked.csv")
 
 # ##### generate maps of the selected metrics ----------------------------------
-make_metric_maps(landscape = path$lc_raster, aoi = aoi, tempdir = path$proc_dir, plotdir = out_dir)
-path$metrics_maps <- file.path(out_dir, "plots.pdf") # output tbd
+make_metric_maps(landscape = path$lc_raster,
+                 aoi = aoi,
+                 ranks = path$metrics_ranked,
+                 tempdir = path$proc_dir,
+                 plotdir = out_dir)
+path$metrics_report <- file.path(out_dir, "flm_report.pdf") # output tbd
 
 # ##### end --------------------------------------------------------------------
 ########################## END LANDSCAPE METRICS ###############################
+
+########################MAKE REPORT#############################################
+# Generating r markdown --------------------------------------------------------
+
+render("flm_report.Rmd")
+
+
+
+
 
