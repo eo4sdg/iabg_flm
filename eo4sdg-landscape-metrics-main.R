@@ -8,6 +8,8 @@ library(tidyverse)
 library(sf)
 library(corrr)
 library(terra)
+library(rmarkdown)
+library(knitr)
 
 
 ### F-TEP ###
@@ -136,6 +138,16 @@ path$metrics_maps <- file.path(out_dir, "plots.pdf") # output tbd
 
 ########################MAKE REPORT#############################################
 # Generating r markdown --------------------------------------------------------
+
+# only works if we have run the code above and have the files
+# - metrics.csv,
+# - metrics_ranked.csv
+# and the following objects in the environment:
+# - aoi
+# - others (?): TODO, which ones
+# (NOTE: depending on environment objects is NOT good practice.)
+# TODO: Save all needed inputs and load them within the Rmd file.
+
 
 render("flm_report.Rmd",
        output_dir = out_dir)
