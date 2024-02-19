@@ -26,9 +26,18 @@ landscape metrics
 
 ## Patch metrics
 
-```{r pressure, echo=FALSE}
-
+```{r, echo = FALSE}
 plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE)
+```
+
+
+The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were:
+`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`. `Id` is the patch id, and category is the land cover.  For more information on the other metrics, go [\textcolor{blue}{here}](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+
+The category map show the land cover classification used in the FLM metrics calculation. This is the land cover map from the Copernicus Global Land Servive ([\textcolor{blue}{link}](https://land.copernicus.eu/global/products/lc)). For calculating the FLM metrics, only the forest classes are used, and all other layers are treated as a single non-forest category. 
+
+```{r echo=FALSE, warning = FALSE, message = FALSE}
+
 plot_crs <- terra::rast(plot_files[1]) |> terra::crs()
 aoi<- aoi |> terra::project(plot_crs)
 my_adm_bound <- aoi |> sf::st_as_sf() |> st_where_is(tempdir = path$proc_dir)
@@ -45,8 +54,8 @@ for (i in 1:length(plot_files)) {
     tmp <- terra::rast(plot_files[i])
     if(tmp_name == "category") coltab(tmp) <- my_coltab
     plot(tmp,main = tmp_name)
-    lines(aoi, col = "red", alpha = 0.6)
-    lines(adm_bound, lwd = 2.5, alpha = 0.5)
+    plot(aoi, add = TRUE, col = "red", alpha = 0.6, legend = TRUE)
+    lines(adm_bound, lwd = 2.5, alpha = 0.5, legend = TRUE)
 }
 par(mfrow = c(1,1))
 
