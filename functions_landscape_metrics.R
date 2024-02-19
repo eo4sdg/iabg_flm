@@ -309,6 +309,9 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     par(mfrow = c(2,2))
 
     #save plots to PDF
+    my_coltab<- data.frame(coltab(path$lc_raster |> terra::rast()))
+    my_coltab<- rbind(my_coltab, c(value = -9999, my_coltab[1,2:5]))
+
     for (i in 1:nrow(names)) {
         tmp_name <- names$plot_name[i] |> gsub(" ", "_", x = _)
         tmp <- ms2[[i]] |>
@@ -316,6 +319,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                         filename = file.path(plotdir, tmp_name) |>
                             fs::path_ext_set("tif"),
                         overwrite = TRUE)
+        if(tmp_name == "category") coltab(tmp) <- my_coltab
         plot(tmp,main = tmp_name)
         lines(aoi, col = "red", alpha = 0.6)
         lines(adm_bound, lwd = 2.5, alpha = 0.5)
