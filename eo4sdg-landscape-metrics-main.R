@@ -113,12 +113,22 @@ print(files)
 # END --------------------------------------------------------------------------
 ################################################################################
 
+# Mexico AOI and lc map with 12 forest classes to test locally --JOSE
+# polygon_wkt <- "POLYGON ((-100.389756 20.506008, -100.324451 20.509012, -100.348282 20.557294, -100.388840 20.558581, -100.389756 20.506008))"
+# polygon_wkt_sf <- sf::st_as_sfc(polygon_wkt)
+# aoi <- terra::vect(polygon_wkt_sf)
+# terra::crs(aoi) <- "EPSG:4326"
+# aoi<- sf::st_as_sf(aoi)
+#
+# plot(aoi)
+
 ########################## LANDSCAPE METRICS ###################################
 
 path <- list(proc_dir = proc_dir, # change it to proc_dir, actually we can delete it
              lc_raster = "//gdfs06/DATEN09/ESA-EO4SDG_D9/01_inputData/openData/raster/PROBAV_LC100/PROBAV_LC100_global_v3.0.1_2015-base_Forest-Type-layer_EPSG-4326.tif",
              output_files = file.path(out_dir, "output_files")) # change the path to PROBAV_LC100_global_v3.0.1_2015-base_Forest-Type-layer_EPSG-4326.tif
 
+# path$lc_raster <- "C:/Users/Cortes-Resendiz/Downloads/PROBAV_LC100_global_v3.0.1_2019_merged.tif"
 ##### calculate forest landscape metrics ---------------------------------------
 calculate_flm(aoi, lc = path$lc_raster, tempdir = path$proc_dir, outdir = out_dir)
 path$metrics <- file.path(out_dir, "metrics.csv")
@@ -136,9 +146,7 @@ make_metric_maps(landscape = path$lc_raster,
                  tempdir = path$proc_dir,
                  plotdir = plotdir)
 
-path$metrics_report <- file.path(out_dir, "flm_report.pdf") # output tbd
 
-make_metric_maps(landscape = path$lc_raster, aoi = aoi, plotdir = out_dir)
 path$metrics_maps <- file.path(out_dir, "plots.pdf") # output tbd
 path$metrics_report <- file.path(out_dir, "flm_report.pdf") # output tbd
 

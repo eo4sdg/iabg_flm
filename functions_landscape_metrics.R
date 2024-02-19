@@ -220,8 +220,8 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                              filename = file.path(tempdir, "landscape_crop.tif"),
                              overwrite = TRUE)
     # get only forest classes
-    landscape<- select_forest_from_glc_lcc(landscape, tempdir = tempdir, binary = FALSE)
     landscape <- project_to_m(landscape, tempdir = tempdir)
+    landscape<- select_forest_from_glc_lcc(landscape, tempdir = tempdir, binary = FALSE)
     aoi<- terra::project(aoi, terra::crs(landscape))
 
     #get administrative boundaries if needed, up to level 1, i.e., country and state boundaries
@@ -232,8 +232,10 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     }
 
 
-    # remove na # ALREADY DONE ABOVE in select_forest_from_glc_lcc
-    # landscape<- terra::subst(landscape, NA, -9999,
+    # projection can introduce NAs in the borders!
+    # fixed: do projection before classification of forests
+    # landscape<- terra::subst(landscape, as.numeric(NA), -9999,
+    #                          raw = TRUE,
     #                          filename = file.path(tempdir, "landscape_no_NA.tif"),
     #                          overwrite = TRUE)
 
@@ -259,8 +261,8 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # patches <- setNames(Reduce(cover, patches$layer_1), "id")
 
     # this reduction is performed out of memory! confirmed equal ouptut
-    patches <- patches |> unlist() |> sprc() |>
-        merge(filename = file.path(tempdir, "patches.tif"),
+    patches <- patches |> unlist() |> terra::sprc() |>
+        terra::merge(filename = file.path(tempdir, "patches.tif"),
               overwrite = TRUE,
               names = "id")
 
@@ -270,9 +272,9 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     wh_metrics<- NULL
     if(!missing(ranks) && inherits(ranks, "data.frame")){ # ranks was converted from chr to df at beginning...
         wh_metrics <- ranks |>
-            filter(level == "patch") |>
-            top_n(n = -5, wt = rank_no_ties) |>
-            pull(metric)
+            dplyr::filter(level == "patch") |>
+            dplyr::top_n(n = -5, wt = rank_no_ties) |>
+            dplyr::pull(metric)
     }
     #sp
     ms <- landscapemetrics::spatialize_lsm(landscape,
@@ -315,8 +317,8 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                             fs::path_ext_set("tif"),
                         overwrite = TRUE)
         plot(tmp,main = tmp_name)
-        plot(aoi, add = TRUE)
-        plot(adm_bound, add = TRUE, lwd = 2.5)
+        lines(aoi, col = "red", alpha = 0.6)
+        lines(adm_bound, lwd = 2.5, alpha = 0.5)
     }
     par(mfrow = c(1,1))
     #turn off PDF plotting
