@@ -1,0 +1,53 @@
+---
+title: "Forest Landscape Metrics (FLM)"
+author: "IABG EO TEAM"
+date: "2024"
+output:
+  pdf_document:
+    toc: true
+    highlight: zenburn
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Metrics
+
+Explanation of metrics -- 
+
+patch metrics
+
+class metrics
+
+landscape metrics
+
+# Plots
+
+## Patch metrics
+
+```{r pressure, echo=FALSE}
+
+plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE)
+plot_crs <- terra::rast(plot_files[1]) |> terra::crs()
+aoi<- aoi |> terra::project(plot_crs)
+my_adm_bound <- aoi |> sf::st_as_sf() |> st_where_is(tempdir = path$proc_dir)
+adm_bound <- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 2)
+adm_bound <- adm_bound |> terra::project(terra::crs(aoi)) |> terra::crop(terra::ext(aoi))
+
+my_coltab<- data.frame(coltab(path$lc_raster |> terra::rast()))
+my_coltab<- rbind(my_coltab, c(value = -9999, my_coltab[1,2:5]))
+
+par(mfrow = c(2,2))
+for (i in 1:length(plot_files)) {
+    tmp_name <- fs::path_file(plot_files[i]) |> 
+        fs::path_ext_remove()
+    tmp <- terra::rast(plot_files[i])
+    if(tmp_name == "category") coltab(tmp) <- my_coltab
+    plot(tmp,main = tmp_name)
+    lines(aoi, col = "red", alpha = 0.6)
+    lines(adm_bound, lwd = 2.5, alpha = 0.5)
+}
+par(mfrow = c(1,1))
+
+```
