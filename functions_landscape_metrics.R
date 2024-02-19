@@ -58,8 +58,10 @@ calculate_flm <- function(aoi,
 
     landscape <- project_to_m(landscape, tempdir = tempdir)
     aoi<- sf::st_transform(aoi, terra::crs(landscape))
-
-    # calculate metrics
+    landscape<- terra::subst(landscape, NA, 0,
+                             raw = TRUE,
+                             filename = file.path(tempdir, "landscape_no_NA.tif"),
+                             overwrite = TRUE)    # calculate metrics
     area_metrics <-
         landscapemetrics::sample_lsm(landscape,
                                      aoi,
