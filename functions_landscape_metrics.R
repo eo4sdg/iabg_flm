@@ -19,7 +19,7 @@
 calculate_flm <- function(aoi,
                           lc,
                           ... ,
-                          plot_id,
+                          plot_id = NULL,
                           max_area = 1000,
                           class_names,
                           tempdir = "data/temp",
@@ -56,8 +56,6 @@ calculate_flm <- function(aoi,
                       filename = file.path(tempdir, "lc_from_aoi.tif"),
                       overwrite = TRUE)
 
-    landscape <- project_to_m(landscape, tempdir = tempdir)
-    aoi<- sf::st_transform(aoi, terra::crs(landscape))
 
     # calculate metrics
     area_metrics <-
@@ -74,29 +72,27 @@ calculate_flm <- function(aoi,
     #the object area metrics is the one used in script 4
     write.csv(area_metrics, file = file.path(outdir, "metrics.csv")) #
 
+    list.files(recursive = TRUE)
+
 
     # outputs
-    if(!is.null(plot_id)){
-        area_metrics_w <-
-            area_metrics %>%
-            dplyr::filter(level != 'patch') %>%
-            tidyr::pivot_wider(id_cols     = plot_id,
-                               names_from  = c("level", 'class', 'metric'),
-                               values_from = value)
+    # area_metrics_w <-
+    #     area_metrics %>%
+    #     dplyr::filter(level != 'patch') %>%
+    #     dplyr::pivot_wider(id_cols     = plot_id,
+    #                 names_from  = c("level", 'class', 'metric'),
+    #                 values_from = value)
 
-        area_metrics_spatial <-
-            dplyr::left_join(aoi,
-                      area_metrics_w,
-                      by = setNames("plot_id", plot_id))
-        # DOES NOT WORK IF plot_id NOT PROVIDED FROM BEGINNING
-        write.csv(area_metrics_spatial, file = file.path(outdir, "metrics_spatial.csv")) #
+    # area_metrics_spatial <-
+    #     left_join(aoi,
+    #               area_metrics_w,
+    #               by = setNames("plot_id", plot_id))
+    # DOES NOT WORK IF plot_id NOT PROVIDED FROM BEGINNING
 
-        #return metrics
-        return(list(area_metrics = area_metrics,
-                    area_metrics_spatial = area_metrics_spatial))
-    }
-
-        return(area_metrics)
+    #return metrics
+    # return(list(area_metrics = area_metrics,
+    #             area_metrics_spatial = area_metrics_spatial))
+    return(area_metrics)
     # # outputs
     # csv
     # render a rmd file with tables
@@ -124,8 +120,8 @@ calc_beta_rank <- function(df,
                            correlation = FALSE,
                            df_with_intermediate_steps = FALSE,
                            outdir = "data/temp"){
-    if(inherits(df, "character")) df<- read.csv(df)
-
+    # this function can be completely internal, no need for inputs
+    if(inherits(df, "character")) df<- read.csv(file.path(outdir, "metrics.csv"))
 
     # 0. function input checks
     required_names <- c("layer", "level", "class", "id", "metric", "value",
@@ -202,44 +198,15 @@ calc_beta_rank <- function(df,
 make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                             aoi, # ideally with administrative subdivisions, NOT IMPLEMENTED
                             metrics, # which metrics to plot NOT IMPLEMENTED
-                            ranks, # path to ranked metrics csv
-                            gadm,
                             tempdir = "data/temp", # where should temp data be saved
                             plotdir,
                             ...){ # NOT IMPLEMENTED: extra arguments for writeRaster
     if(inherits(landscape, "character")){
         landscape <- terra::rast(landscape)
+        landscape <- terra::crop(landscape,
+                                 terra::project(terra::vect(aoi),
+                                                terra::crs(landscape)))
     }
-
-    if(!missing(ranks) && inherits(ranks, "character")) ranks<- read.csv(ranks)
-
-    aoi<- terra::project(terra::vect(aoi),
-                         terra::crs(landscape))
-    landscape <- terra::crop(landscape,
-                             aoi,
-                             filename = file.path(tempdir, "landscape_crop.tif"),
-                             overwrite = TRUE)
-    # get only forest classes
-    landscape<- select_forest_from_glc_lcc(landscape, tempdir = tempdir, binary = FALSE)
-    landscape <- project_to_m(landscape, tempdir = tempdir)
-    aoi<- terra::project(aoi, terra::crs(landscape))
-
-    #get administrative boundaries if needed, up to level 1, i.e., country and state boundaries
-    if(missing(gadm)){
-        my_adm_bound <- aoi |> sf::st_as_sf() |> st_where_is(tempdir = tempdir)
-        adm_bound <- geodata::gadm(my_adm_bound, path = tempdir, level = 2)
-        adm_bound <- adm_bound |> terra::project(terra::crs(aoi))
-    }
-
-
-    # remove na # ALREADY DONE ABOVE in select_forest_from_glc_lcc
-    # landscape<- terra::subst(landscape, NA, -9999,
-    #                          filename = file.path(tempdir, "landscape_no_NA.tif"),
-    #                          overwrite = TRUE)
-
-    to_mask_for_plot<- terra::ifel(landscape == -9999, NA,1,
-                                   filename = file.path(tempdir, "landscape_to_mask.tif"),
-                                   overwrite = TRUE)
 
     types <-
         landscapemetrics::list_lsm() %>%
@@ -252,33 +219,15 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # landscape <- terra::unwrap(landscapemetrics::landscape)
     # landscape <- terra::rast(path$raster) %>% subst(NA, -9999)
     # create a spatial raster with patch id and LSM values --------------------
-
+    # remove na
+    landscape<- terra::subst(landscape, NA, -9999)
     patches <- landscapemetrics::get_patches(landscape, to_disk = TRUE)
 
     # this reduction is performed in memory!
-    # patches <- setNames(Reduce(cover, patches$layer_1), "id")
-
-    # this reduction is performed out of memory! confirmed equal ouptut
-    patches <- patches |> unlist() |> sprc() |>
-        merge(filename = file.path(tempdir, "patches.tif"),
-              overwrite = TRUE,
-              names = "id")
+    patches <- setNames(Reduce(cover, patches$layer_1), "id")
 
     # level should be user specified (e.g based on the beta selection method Andres)
-
-    # ifranks are provided, we grab the top n
-    wh_metrics<- NULL
-    if(!missing(ranks) && inherits(ranks, "data.frame")){ # ranks was converted from chr to df at beginning...
-        wh_metrics <- ranks |>
-            filter(level == "patch") |>
-            top_n(n = -5, wt = rank_no_ties) |>
-            pull(metric)
-    }
-    #sp
-    ms <- landscapemetrics::spatialize_lsm(landscape,
-                                           level = "patch",
-                                           metric = wh_metrics,
-                                           to_disk = TRUE)
+    ms <- landscapemetrics::spatialize_lsm(landscape, level = "patch", to_disk = TRUE)
 
     # for the hessen example, to_disk = TRUE throws error:
     # Error: [writeValues] too few values for writing: 5312856 < 11153310
@@ -297,26 +246,18 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
         dplyr::left_join(types) %>%
         dplyr::mutate(plot_name = ifelse(is.na(name), function_name, name))
 
-    # specify path to save PDF to
+    #specify path to save PDF to
     destination <- file.path(plotdir, "plots.pdf")
     message("creating plots in pdf")
-
+    #open PDF
     pdf(file=destination)
 
     #specify to save plots in 2x2 grid
     par(mfrow = c(2,2))
 
     #save plots to PDF
-    for (i in 1:nrow(names)) {
-        tmp_name <- names$plot_name[i] |> gsub(" ", "_", x = _)
-        tmp <- ms2[[i]] |>
-            terra::mask(to_mask_for_plot,
-                        filename = file.path(plotdir, tmp_name) |>
-                            fs::path_ext_set("tif"),
-                        overwrite = TRUE)
-        plot(tmp,main = tmp_name)
-        plot(aoi, add = TRUE)
-        plot(adm_bound, add = TRUE, lwd = 2.5)
+    for (i in 1:length(names)) {
+        print(plot(ms2[[i]],main = names$plot_name[i]))
     }
     par(mfrow = c(1,1))
     #turn off PDF plotting
@@ -335,7 +276,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     #     dplyr::group_by(id, function_name, level, metric) %>%
     #     dplyr::summarise(value_s = max(value_s, na.rm = TRUE))
     #
-    # # # create tabular version of LSM  ------------------------------------------
+    # # create tabular version of LSM  ------------------------------------------
     # m <- calculate_lsm(landscape, level = "patch")
     #
     # # joining to check if the outputs from calculate_lsm()
@@ -345,56 +286,6 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     #     dplyr::left_join(ms4) %>%
     #     dplyr::mutate(check = dplyr::near(value, value_s, tol = .00001))
     # foo %>% dplyr::pull(check) %>% table()
-    # # correct up to specified tolerance
+    # correct up to specified tolerance
     return()
-}
-
-project_to_m<- function(x, tempdir = "data/temp"){
-    # x is a terraraster object
-    if(landscapemetrics::check_landscape(x)$units != "m"){
-        wh_epsg <- utm_zone(x, proj4string = TRUE)
-        # wh_epsg <- "epsg:6933" fallback option
-        terra::project(x, wh_epsg, method = "near",
-                filename = file.path(tempdir, "landscape_crop_project_m.tif"),
-                overwrite = TRUE)
-    } else{ # dont change anything if already in m
-        x
-    }
-
-    # https://nsidc.org/data/user-resources/help-center/guide-ease-grids
-}
-
-select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE){
-    # set binary to TRUE if you just want a 1,0 (forest/no forest) mask , e.g., for disturbance
-    # here we assume the land cover class leayer as in
-    # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS1_PUM_LC100m-V3_I3.4.pdf
-    # table 4 page 28-29
-    forest_map_code <- c("111" = "closed_forest_evergreen_needle_leaf",
-                         "112" = "closed_forest_evergreen_broad_leaf",
-                         "113" = "closed_forest_decidious_needle_leaf",
-                         "114" = "closed_forest_decidious_broad_leaf",
-                         "115" = "closed_forest_mixed",
-                         "116" = "closed_forest_unknown",
-                         "121" = "open_forest_evergreen_needle_leaf",
-                         "122" = "open_forest_evergreen_broad_leaf",
-                         "123" = "open_forest_decidious_needle_leaf",
-                         "124" = "open_forest_decidious_broad_leaf",
-                         "125" = "open_forest_mixed",
-                         "126" = "open_forest_unknown",
-                         "-9999" = "no_forest") |>
-        list(. = _) |> with(data.frame(ID = as.numeric(names(.)), category = .))
-    if(binary){
-        out<- terra::ifel(x %in% forest_map_code$ID, 1, 0,
-                   filename = file.path(tempdir, "forest_mask.tif"),
-                   overwrite = TRUE)
-    } else{
-        out<- terra::ifel(x %in% forest_map_code$ID, x, -9999,
-                   filename = file.path(tempdir, "forest_mask_tmp.tif"),
-                   overwrite = TRUE) |>
-            terra::categories(value = forest_map_code) |>
-            terra::writeRaster("forest_mask.tif", overwrite = TRUE)
-    }
-
-    return(out)
-
 }
