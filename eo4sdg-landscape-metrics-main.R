@@ -177,7 +177,7 @@ path$metrics_report <- file.path(out_dir, "flm_report.pdf") # output tbd
 # TODO: Save all needed inputs and load them within the Rmd file.
 
 aoi<- terra::vect(aoi)
-render("flm_report.Rmd",
+rmarkdown::render(file.path(workflow_dir, "flm_report.Rmd"),
        output_dir = out_dir,
        output_format = "all")
 
