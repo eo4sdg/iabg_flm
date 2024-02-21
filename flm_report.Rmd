@@ -3,16 +3,22 @@ title: "Forest Landscape Metrics (FLM)"
 author: "IABG EO TEAM"
 date: "2024"
 output:
-  pdf_document:
-    toc: true
-    highlight: zenburn
+    pdf_document:
+        toc: FALSE
+        highlight: zenburn
+    html_document:
+        css: "style.css"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE)
 ```
 
-# Results
+<!-- \newpage -->
+
+<!-- # Results -->
 
 ```{r, echo = FALSE}
 plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE)
@@ -20,23 +26,81 @@ plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE)
 plot_crs <- terra::rast(plot_files[1]) |> terra::crs()
 aoi<- aoi |> terra::project(plot_crs)
 my_adm_bound <- aoi |> sf::st_as_sf() |> st_where_is(tempdir = path$proc_dir)
-adm_bound <- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 2)
-
-adm_bound <- adm_bound |> terra::project(terra::crs(aoi)) |> 
+adm_bound_all <- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 2)
+country_adm<- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 0)
+adm_bound <- adm_bound_all |> terra::project(terra::crs(aoi)) |> 
     terra::crop(terra::ext(aoi))
 
 my_coltab<- data.frame(coltab(path$lc_raster |> terra::rast()))
 my_coltab<- rbind(my_coltab, c(value = -9999, my_coltab[1,2:5]))
 
+
 ```
 This section summarizes the results for the chosen AOI, located in the municipality(ies) of **`r unique(adm_bound$NAME_2)`**, in the state(s)/ of **`r unique(adm_bound$NAME_1)`**, in the country(ies) of **`r unique(adm_bound$COUNTRY[1])`**, respectively. 
 
-## Plots
+```{r}
+# get appropiate raster and crop it 
+r <- path$lc_raster |> terra::rast()
+aoi<- aoi |> terra::project(r)
+r<- r |> terra::crop(aoi)
+
+#area
+area<- terra::expanse(aoi, unit = "ha", transform = TRUE) |> round(2)
+
+# percentage forest and all other classes
+r_masked<- r |> mask(aoi)
+r_masked<- r_masked |> select_forest_from_glc_lcc(all = TRUE)
+r_masked_forest<- r_masked |> select_forest_from_glc_lcc(binary = TRUE)
+r_masked_forest_types<- r_masked |> select_forest_from_glc_lcc()
+
+area_pixels<- terra::expanse(r_masked, unit = "ha", transform = TRUE, byValue = TRUE)
+area_pixels_forest<- terra::expanse(r_masked_forest, unit = "ha", transform = TRUE, byValue = TRUE)
+area_pixels_forest_type<- terra::expanse(r_masked_forest_types, unit = "ha", transform = TRUE, byValue = TRUE) |> 
+    filter(value != "no_forest")
+
+par(mfrow = c(2, 2))
+world_map<- geodata::world(path = path$proc_dir)
+aoi<- aoi |> terra::project(terra::crs(world_map))
+plot(world_map)
+plot(country_adm, add = TRUE, col = "red")
+plot(country_adm)
+plot(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))] |> terra::aggregate(), add = TRUE, col = "red")
+plot(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))])
+
+plot(aoi, add = TRUE, col = "red")
+plot(r_masked)
+par(mfrow = c(1,1))
+
+```
 
 
+<!-- ## Plots -->
+
+<!-- ### Exploratory Data Analysis -->
+
+```{r, echo = FALSE}
+ forest_perc<- (100*area_pixels_forest$area[2]/(area_pixels_forest$area[2]+area_pixels_forest$area[1])) |> round(2)
+forest_type_perc<- area_pixels_forest_type |> mutate(total_area = sum(area), perc = round(area/total_area,2))
 
 
-### Patch metrics
+```
+
+The selected AOI has **`r area`** hectares, out of which **`r forest_perc`%** is forest. Of the forest land cover, **`r with(forest_type_perc, gsub("_"," ",paste0(glue::glue("{value} is {perc}%"), collapse = ", ")))`** The other land cover categories are **`r area_pixels$value |> paste0(collapse = ", ") |> gsub("_"," ",x=_) |> tolower()`**. In terms of area (ha), they are distributed as follows:
+
+```{r}
+par(mfrow = c(2,2))
+barplot(area~value, area_pixels)
+barplot(area~value, area_pixels_forest, names.arg = c("non-forest", "forest"))
+barplot(area~value, area_pixels_forest_type)
+par(mfrow = c(1,1))
+```
+
+
+`r barplot(r_masked_forest)`
+
+`r barplot(r_masked_forest_types)`
+
+<!-- ### Patch metrics -->
 
 The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. `Id` is the patch id, and category is the land cover. For more information on the other metrics, go [\textcolor{blue}{here}](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
 
@@ -69,16 +133,16 @@ par(mfrow = c(1,1))
 
 ```
 
-# General Information
+<!-- # General Information -->
 
-The explanation of the metrics has been widely reused from the following source: [\textcolor{blue}{Original}](https://r-spatialecology.github.io/landscapemetrics/articles/general_background.html#levels-of-landscape-metrics)
+The following explanation of the metrics has been widely reused from the following source: [\textcolor{blue}{Original}](https://r-spatialecology.github.io/landscapemetrics/articles/general_background.html#levels-of-landscape-metrics)
 
 
 Ecology and landscape ecology mainly studies interactions between organisms and their environment. In a wider sense, the environment perceived by the organism can be defined as a landscape. This can spread from huge areas for, e.g., mobile, large-bodied mammals to much smaller areas for, e.g., immobile insects and always depends on the research question.
 
 Landscape metrics are tools to characterize a landscape. This includes mainly describing the composition and configuration of a landscape. While the composition basically describes how much of the landscape is occupied by a certain land cover type, the configuration mainly describes the spatial arrangement of the land cover types. The basic idea of landscape metrics is to condense as much information as possible into single number.
 
-## Levels of metrics
+<!-- ## Levels of metrics -->
 
 **Landscape metrics** can be calculated for three different levels (or "scales"). Each level contains information about different aspects of the landscape. Level of interest depends largely on the research question, and often a combination of several levels can be useful. Similar, also the decision of which metric to use depends on the research question asked.
 
@@ -88,7 +152,7 @@ Landscape metrics are tools to characterize a landscape. This includes mainly de
 
 **Landscape level metrics** summarizes the whole landscape into one value. This can either be done by summarizing metrics of lower levels or calculating a metric including all patches and classes. Following, the output will always be just one number. Landscape level metrics are suitable for condensing information about the landscape into just one value.
 
-## Classes of landscape metrics
+<!-- ## Classes of landscape metrics -->
 
 There are six different classes of landscape metrics implemented:
 
@@ -103,7 +167,3 @@ There are six different classes of landscape metrics implemented:
 5. **Diversity metrics** are only available on the landscape level. They describe the abundance and dominance/rareness of classes. Thereby, they show the diversity of present classes.
 
 6. **Complexity metrics** For more information, please see [\textcolor{blue}{New Metrics outside FRAGSTATS}](https://r-spatialecology.github.io/landscapemetrics/articles/new_metrics.html).
-
-## Class Metrics
-
-

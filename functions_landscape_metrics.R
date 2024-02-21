@@ -372,12 +372,16 @@ project_to_m<- function(x, tempdir = "data/temp"){
     # https://nsidc.org/data/user-resources/help-center/guide-ease-grids
 }
 
-select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE){
+select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE, all = FALSE){
     # set binary to TRUE if you just want a 1,0 (forest/no forest) mask , e.g., for disturbance
     # here we assume the land cover class leayer as in
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS1_PUM_LC100m-V3_I3.4.pdf
     # table 4 page 28-29
-    forest_map_code <- c("111" = "closed_forest_evergreen_needle_leaf",
+    forest_map_code <- c("20" = "Shrubs",
+                         "30" = "Herbaceous vegetation",
+                         "40" = "Cultivated_and_managed_vegetation/agriculture",
+                         "50" =  "Urban/built_up",
+                         "111" = "closed_forest_evergreen_needle_leaf",
                          "112" = "closed_forest_evergreen_broad_leaf",
                          "113" = "closed_forest_decidious_needle_leaf",
                          "114" = "closed_forest_decidious_broad_leaf",
@@ -391,12 +395,13 @@ select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE)
                          "126" = "open_forest_unknown",
                          "-9999" = "no_forest") |>
         list(. = _) |> with(data.frame(ID = as.numeric(names(.)), category = .))
+    if(all) return(x |> terra::categories(value = forest_map_code))
     if(binary){
         out<- terra::ifel(x %in% forest_map_code$ID, 1, 0,
                    filename = file.path(tempdir, "forest_mask.tif"),
                    overwrite = TRUE)
     } else{
-        out<- terra::ifel(x %in% forest_map_code$ID, x, -9999,
+        out<- terra::ifel(x %in% 111:126, x, -9999,
                    filename = file.path(tempdir, "forest_mask_tmp.tif"),
                    overwrite = TRUE) |>
             terra::categories(value = forest_map_code) |>
