@@ -177,14 +177,15 @@ path$metrics_report <- file.path(out_dir, "flm_report.pdf") # output tbd
 # TODO: Save all needed inputs and load them within the Rmd file.
 
 aoi<- terra::vect(aoi)
-jose_austausch<- "P:/Sonstige/Austausch/cortes-resendiz/flm_report"
-render("flm_report.Rmd",
-       output_dir = out_dir, # out_dir # for F-TEP CHANGE THIS
+
+rmarkdown::render(file.path(workflow_dir, "flm_report.Rmd"),
+       output_dir = out_dir,
        output_format = "all")
 
 path$report_html <- file.path(out_dir, "flm_report.html")
 path$report_pdf <- file.path(out_dir, "flm_report.pdf")
 
+jose_austausch<- "P:/Sonstige/Austausch/cortes-resendiz/flm_report"
 fs::file_copy(path$report_html, new_path = jose_austausch, overwrite = TRUE)
 fs::file_copy(path$report_pdf, new_path = jose_austausch, overwrite = TRUE)
 ## \\DRESDENGDFD\Proj\Sonstige\Austausch\cortes-resendiz\flm_report
