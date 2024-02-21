@@ -31,7 +31,7 @@ country_adm<- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 0)
 adm_bound <- adm_bound_all |> terra::project(terra::crs(aoi)) |> 
     terra::crop(terra::ext(aoi))
 
-my_coltab<- data.frame(coltab(path$lc_raster |> terra::rast()))
+my_coltab<- data.frame(terra::coltab(path$lc_raster |> terra::rast()))
 my_coltab<- rbind(my_coltab, c(value = -9999, 180,180,180,255))
 
 
@@ -48,7 +48,7 @@ r<- r |> terra::crop(aoi)
 area<- terra::expanse(aoi, unit = "ha", transform = TRUE) |> round(2)
 
 # percentage forest and all other classes
-r_masked<- r |> mask(aoi)
+r_masked<- r |> terra::mask(aoi)
 r_masked<- r_masked |> select_forest_from_glc_lcc(all = TRUE)
 r_masked_forest<- r_masked |> select_forest_from_glc_lcc(binary = TRUE)
 r_masked_forest_types<- r_masked |> select_forest_from_glc_lcc()
@@ -57,7 +57,7 @@ area_pixels<- terra::expanse(r_masked, unit = "ha", transform = TRUE, byValue = 
 area_pixels_forest<- terra::expanse(r_masked_forest, unit = "ha", transform = TRUE, byValue = TRUE) |> round(2) |> 
     mutate(value = ifelse(value == 0,"no_forest", "forest"))
 area_pixels_forest_type<- terra::expanse(r_masked_forest_types, unit = "ha", transform = TRUE, byValue = TRUE) |> 
-    filter(value != "no_forest")
+    dplyr::filter(value != "no_forest")
 
 par(mfrow = c(2, 2))
 world_map<- geodata::world(path = path$proc_dir)
@@ -81,7 +81,7 @@ par(mfrow = c(1,1))
 
 ```{r, echo = FALSE}
  forest_perc<- (100*area_pixels_forest$area[2]/(area_pixels_forest$area[2]+area_pixels_forest$area[1])) |> round(2)
-forest_type_perc<- area_pixels_forest_type |> mutate(total_area = sum(area), perc = round(100*area/total_area,2))
+forest_type_perc<- area_pixels_forest_type |> dplyr::mutate(total_area = sum(area), perc = round(100*area/total_area,2))
 ```
 
 The selected AOI has **`r area`** hectares, out of which **`r forest_perc`% (`r with(area_pixels_forest, area[which(value==1)])` ha)** is forest. Of the forest land cover, **`r with(forest_type_perc, gsub("_"," ",paste0(glue::glue("{value} is {perc}%"), collapse = ", ")))`** The other land cover categories are **`r area_pixels$value |> paste0(collapse = ", ") |> gsub("_"," ",x=_) |> tolower()`**. In terms of area (ha), they are distributed as follows:
@@ -89,27 +89,27 @@ The selected AOI has **`r area`** hectares, out of which **`r forest_perc`% (`r 
 ```{r}
 par(mfrow = c(2,2))
 ggcolors<- my_coltab |> dplyr::mutate(hex = grDevices::rgb(red, green, blue, maxColorValue = 255)) |> 
-    inner_join(levels(r_masked)[[1]], by = join_by(value == ID))
+    dplyr::inner_join(terra::levels(r_masked)[[1]], by = dplyr::join_by(value == ID))
 color_forest<- grDevices::rgb(78,117, 31, maxColorValue = 255)
 names(color_forest)<- "forest"
 my_colors<- ggcolors$hex   
 names(my_colors)<- ggcolors$category
 my_colors<- c(my_colors, color_forest)
-my_color_scale<- scale_colour_manual(name = "value",values = my_colors)
-my_fill_scale<- scale_fill_manual(name = "value",values = my_colors)
+my_color_scale<- ggplot2::scale_colour_manual(name = "value",values = my_colors)
+my_fill_scale<- ggplot2::scale_fill_manual(name = "value",values = my_colors)
 
 my_barplot<- function(data, ...){
-    ggplot() + 
-    geom_bar(aes(x = value, y = area, fill = value), 
+    ggplot2::ggplot() + 
+    ggplot2::geom_bar(ggplot2::aes(x = value, y = area, fill = value), 
              data = data,
              stat = "identity") + 
-    theme_minimal() + 
+    ggplot2::theme_minimal() + 
     my_fill_scale + 
-    labs(x = "", y = "area (ha)", fill = "") + 
-    theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        legend.title = element_blank(),
+    ggplot2::labs(x = "", y = "area (ha)", fill = "") + 
+    ggplot2::theme(axis.title.x=ggplot2::element_blank(),
+        axis.text.x=ggplot2::element_blank(),
+        axis.ticks.x=ggplot2::element_blank(),
+        legend.title = ggplot2::element_blank(),
         legend.position = "right")
 }
     
@@ -118,11 +118,6 @@ my_barplot(area_pixels_forest)# , names.arg = c("non-forest", "forest"))
 my_barplot(area_pixels_forest_type)
 par(mfrow = c(1,1))
 ```
-
-
-`r barplot(r_masked_forest)`
-
-`r barplot(r_masked_forest_types)`
 
 <!-- ### Patch metrics -->
 
