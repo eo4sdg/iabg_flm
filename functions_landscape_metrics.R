@@ -377,10 +377,16 @@ select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE,
     # here we assume the land cover class leayer as in
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS1_PUM_LC100m-V3_I3.4.pdf
     # table 4 page 28-29
-    forest_map_code <- c("20" = "Shrubs",
-                         "30" = "Herbaceous vegetation",
+    forest_map_code <- c("0" = "No_input_data_available",
+                         "20" = "Shrubs",
+                         "30" = "Herbaceous_vegetation",
                          "40" = "Cultivated_and_managed_vegetation/agriculture",
-                         "50" =  "Urban/built_up",
+                         "50" = "Urban/built_up",
+                         "60" = "Bare/sparse_vegetation",
+                         "70" = "Snow_and_ice",
+                         "80" = "Permanent_water_bodies",
+                         "90" = "Herbaceous_wetland",
+                         "100" = "Moss_and_lichen",
                          "111" = "closed_forest_evergreen_needle_leaf",
                          "112" = "closed_forest_evergreen_broad_leaf",
                          "113" = "closed_forest_decidious_needle_leaf",
@@ -393,11 +399,12 @@ select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE,
                          "124" = "open_forest_decidious_broad_leaf",
                          "125" = "open_forest_mixed",
                          "126" = "open_forest_unknown",
+                         "200" = "open_Sea",
                          "-9999" = "no_forest") |>
         list(. = _) |> with(data.frame(ID = as.numeric(names(.)), category = .))
     if(all) return(x |> terra::categories(value = forest_map_code))
     if(binary){
-        out<- terra::ifel(x %in% forest_map_code$ID, 1, 0,
+        out<- terra::ifel(x %in% 111:126, 1, 0,
                    filename = file.path(tempdir, "forest_mask.tif"),
                    overwrite = TRUE)
     } else{

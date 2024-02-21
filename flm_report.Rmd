@@ -32,11 +32,11 @@ adm_bound <- adm_bound_all |> terra::project(terra::crs(aoi)) |>
     terra::crop(terra::ext(aoi))
 
 my_coltab<- data.frame(coltab(path$lc_raster |> terra::rast()))
-my_coltab<- rbind(my_coltab, c(value = -9999, my_coltab[1,2:5]))
+my_coltab<- rbind(my_coltab, c(value = -9999, 180,180,180,255))
 
 
 ```
-This section summarizes the results for the chosen AOI, located in the municipality(ies) of **`r unique(adm_bound$NAME_2)`**, in the state(s)/ of **`r unique(adm_bound$NAME_1)`**, in the country(ies) of **`r unique(adm_bound$COUNTRY[1])`**, respectively. 
+This section summarizes the results for the chosen AOI, located in the municipality(ies) of **`r unique(adm_bound$NAME_2)`**, in the state(s)/province(s) of **`r unique(adm_bound$NAME_1)`**, in the country(ies) of **`r unique(adm_bound$COUNTRY[1])`**, respectively. 
 
 ```{r}
 # get appropiate raster and crop it 
@@ -54,7 +54,8 @@ r_masked_forest<- r_masked |> select_forest_from_glc_lcc(binary = TRUE)
 r_masked_forest_types<- r_masked |> select_forest_from_glc_lcc()
 
 area_pixels<- terra::expanse(r_masked, unit = "ha", transform = TRUE, byValue = TRUE)
-area_pixels_forest<- terra::expanse(r_masked_forest, unit = "ha", transform = TRUE, byValue = TRUE)
+area_pixels_forest<- terra::expanse(r_masked_forest, unit = "ha", transform = TRUE, byValue = TRUE) |> round(2) |> 
+    mutate(value = ifelse(value == 0,"no_forest", "forest"))
 area_pixels_forest_type<- terra::expanse(r_masked_forest_types, unit = "ha", transform = TRUE, byValue = TRUE) |> 
     filter(value != "no_forest")
 
@@ -80,18 +81,41 @@ par(mfrow = c(1,1))
 
 ```{r, echo = FALSE}
  forest_perc<- (100*area_pixels_forest$area[2]/(area_pixels_forest$area[2]+area_pixels_forest$area[1])) |> round(2)
-forest_type_perc<- area_pixels_forest_type |> mutate(total_area = sum(area), perc = round(area/total_area,2))
-
-
+forest_type_perc<- area_pixels_forest_type |> mutate(total_area = sum(area), perc = round(100*area/total_area,2))
 ```
 
-The selected AOI has **`r area`** hectares, out of which **`r forest_perc`%** is forest. Of the forest land cover, **`r with(forest_type_perc, gsub("_"," ",paste0(glue::glue("{value} is {perc}%"), collapse = ", ")))`** The other land cover categories are **`r area_pixels$value |> paste0(collapse = ", ") |> gsub("_"," ",x=_) |> tolower()`**. In terms of area (ha), they are distributed as follows:
+The selected AOI has **`r area`** hectares, out of which **`r forest_perc`% (`r with(area_pixels_forest, area[which(value==1)])` ha)** is forest. Of the forest land cover, **`r with(forest_type_perc, gsub("_"," ",paste0(glue::glue("{value} is {perc}%"), collapse = ", ")))`** The other land cover categories are **`r area_pixels$value |> paste0(collapse = ", ") |> gsub("_"," ",x=_) |> tolower()`**. In terms of area (ha), they are distributed as follows:
 
 ```{r}
 par(mfrow = c(2,2))
-barplot(area~value, area_pixels)
-barplot(area~value, area_pixels_forest, names.arg = c("non-forest", "forest"))
-barplot(area~value, area_pixels_forest_type)
+ggcolors<- my_coltab |> dplyr::mutate(hex = grDevices::rgb(red, green, blue, maxColorValue = 255)) |> 
+    inner_join(levels(r_masked)[[1]], by = join_by(value == ID))
+color_forest<- grDevices::rgb(78,117, 31, maxColorValue = 255)
+names(color_forest)<- "forest"
+my_colors<- ggcolors$hex   
+names(my_colors)<- ggcolors$category
+my_colors<- c(my_colors, color_forest)
+my_color_scale<- scale_colour_manual(name = "value",values = my_colors)
+my_fill_scale<- scale_fill_manual(name = "value",values = my_colors)
+
+my_barplot<- function(data, ...){
+    ggplot() + 
+    geom_bar(aes(x = value, y = area, fill = value), 
+             data = data,
+             stat = "identity") + 
+    theme_minimal() + 
+    my_fill_scale + 
+    labs(x = "", y = "area (ha)", fill = "") + 
+    theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.title = element_blank(),
+        legend.position = "right")
+}
+    
+my_barplot(area_pixels)    
+my_barplot(area_pixels_forest)# , names.arg = c("non-forest", "forest"))
+my_barplot(area_pixels_forest_type)
 par(mfrow = c(1,1))
 ```
 
@@ -102,9 +126,9 @@ par(mfrow = c(1,1))
 
 <!-- ### Patch metrics -->
 
-The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. `Id` is the patch id, and category is the land cover. For more information on the other metrics, go [\textcolor{blue}{here}](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. `Id` is the patch id, and `category` is the land cover. For more information on the other metrics, go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
 
-The category map show the land cover classification used in the FLM metrics calculation. This is the land cover map from the Copernicus Global Land Servive ([\textcolor{blue}{link}](https://land.copernicus.eu/global/products/lc)). For calculating the FLM metrics, only the forest classes are used, and all other layers are treated as a single non-forest category.
+The category map show the land cover classification used in the FLM metrics calculation. This is the land cover map from the Copernicus Global Land Servive ([link](https://land.copernicus.eu/global/products/lc)). For calculating the FLM metrics, only the forest classes are used, and all other layers are treated as a single non-forest category.
 
 ```{r echo=FALSE, warning = FALSE, message = FALSE}
 
@@ -115,9 +139,6 @@ adm_bound <- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 2)
 
 adm_bound <- adm_bound |> terra::project(terra::crs(aoi)) |> 
     terra::crop(terra::ext(aoi))
-
-my_coltab<- data.frame(coltab(path$lc_raster |> terra::rast()))
-my_coltab<- rbind(my_coltab, c(value = -9999, my_coltab[1,2:5]))
 
 par(mfrow = c(2,2))
 for (i in 1:length(plot_files)) {
@@ -135,7 +156,7 @@ par(mfrow = c(1,1))
 
 <!-- # General Information -->
 
-The following explanation of the metrics has been widely reused from the following source: [\textcolor{blue}{Original}](https://r-spatialecology.github.io/landscapemetrics/articles/general_background.html#levels-of-landscape-metrics)
+The following explanation of the metrics has been widely reused from the following source: [Original](https://r-spatialecology.github.io/landscapemetrics/articles/general_background.html#levels-of-landscape-metrics).
 
 
 Ecology and landscape ecology mainly studies interactions between organisms and their environment. In a wider sense, the environment perceived by the organism can be defined as a landscape. This can spread from huge areas for, e.g., mobile, large-bodied mammals to much smaller areas for, e.g., immobile insects and always depends on the research question.
@@ -166,4 +187,4 @@ There are six different classes of landscape metrics implemented:
 
 5. **Diversity metrics** are only available on the landscape level. They describe the abundance and dominance/rareness of classes. Thereby, they show the diversity of present classes.
 
-6. **Complexity metrics** For more information, please see [\textcolor{blue}{New Metrics outside FRAGSTATS}](https://r-spatialecology.github.io/landscapemetrics/articles/new_metrics.html).
+6. **Complexity metrics** For more information, please see [New Metrics outside FRAGSTATS](https://r-spatialecology.github.io/landscapemetrics/articles/new_metrics.html).
