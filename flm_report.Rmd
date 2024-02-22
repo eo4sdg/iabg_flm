@@ -1,27 +1,34 @@
 ---
-title: "Forest Landscape Metrics (FLM)"
+title: ""
 author: "IABG EO TEAM"
 date: "2024"
-output:
-    pdf_document:
-        toc: FALSE
-        highlight: zenburn
-    html_document:
-        css: "style.css"
+output: html_document
+    
+        
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, 
                       warning = FALSE, 
-                      message = FALSE)
+                      message = FALSE, 
+                      tidy = TRUE, 
+                      fig.width = 7, 
+                      out.width = "\\textwidth", 
+                      fig.pos = "middle")
+
+
 ```
 
-<!-- \newpage -->
 
-<!-- # Results -->
+# Forest Landscape Metrics (FLM) {.tabset}
+
+## Results
 
 ```{r, echo = FALSE}
-plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE)
+plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE) |> 
+    grep("id.tif", x = _, invert = TRUE, fixed = TRUE, value = TRUE) |> 
+    grep("category.tif", x = _, invert = TRUE, fixed = TRUE, value = TRUE)
+    
 
 plot_crs <- terra::rast(plot_files[1]) |> terra::crs()
 aoi<- aoi |> terra::project(plot_crs)
@@ -36,7 +43,7 @@ my_coltab<- rbind(my_coltab, c(value = -9999, 180,180,180,255))
 
 
 ```
-This section summarizes the results for the chosen AOI, located in the municipality(ies) of **`r unique(adm_bound$NAME_2)`**, in the state(s)/province(s) of **`r unique(adm_bound$NAME_1)`**, in the country(ies) of **`r unique(adm_bound$COUNTRY[1])`**, respectively. 
+This section summarizes the results for the chosen AOI, located in the district/municipality(ies) of **`r unique(adm_bound$NAME_2)`**, in the state(s)/province(s) of **`r unique(adm_bound$NAME_1)`**, in the country(ies) of **`r unique(adm_bound$COUNTRY[1])`**, respectively. 
 
 ```{r}
 # get appropiate raster and crop it 
@@ -69,7 +76,10 @@ plot(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))] |> terr
 plot(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))])
 
 plot(aoi, add = TRUE, col = "red")
-plot(r_masked)
+
+plot(adm_bound_all[(adm_bound_all$NAME_2 %in% unique(adm_bound$NAME_2))])
+plot(aoi, add = TRUE, col = "red")
+
 par(mfrow = c(1,1))
 
 ```
@@ -84,10 +94,13 @@ par(mfrow = c(1,1))
 forest_type_perc<- area_pixels_forest_type |> dplyr::mutate(total_area = sum(area), perc = round(100*area/total_area,2))
 ```
 
-The selected AOI has **`r area`** hectares, out of which **`r forest_perc`% (`r with(area_pixels_forest, area[which(value==1)])` ha)** is forest. Of the forest land cover, **`r with(forest_type_perc, gsub("_"," ",paste0(glue::glue("{value} is {perc}%"), collapse = ", ")))`** The other land cover categories are **`r area_pixels$value |> paste0(collapse = ", ") |> gsub("_"," ",x=_) |> tolower()`**. In terms of area (ha), they are distributed as follows:
+The selected AOI has **`r area`** hectares, out of which **`r forest_perc`% (`r with(area_pixels_forest, area[which(value==1)])`ha)** is forest. Of the forest land cover: **`r with(forest_type_perc, gsub("_"," ",paste0(glue::glue("{value} is {perc}%"), collapse = ", ")))`** The other land cover categories are **`r area_pixels$value |> paste0(collapse = ", ") |> gsub("_"," ",x=_) |> tolower()`**. 
+
+Internally, the land cover map from the Copernicus Global Land Servive  is used ([link](https://land.copernicus.eu/global/products/lc)). For calculating the FLM metrics, only the forest classes are used, and all other layers are treated as a single non-forest category.
+
+Spatially and in terms of area (ha), they are distributed as follows:
 
 ```{r}
-par(mfrow = c(2,2))
 ggcolors<- my_coltab |> dplyr::mutate(hex = grDevices::rgb(red, green, blue, maxColorValue = 255)) |> 
     dplyr::inner_join(terra::levels(r_masked)[[1]], by = dplyr::join_by(value == ID))
 color_forest<- grDevices::rgb(78,117, 31, maxColorValue = 255)
@@ -112,18 +125,23 @@ my_barplot<- function(data, ...){
         legend.title = ggplot2::element_blank(),
         legend.position = "right")
 }
-    
+
+r<- select_forest_from_glc_lcc(r, all =TRUE)
+plot(r, plg = list(loc = "bottom"))
+lines(aoi, col = "red", lwd = 2, alpha = 0.6)
+lines(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))], lwd = 2.5, alpha = 0.5)
+
 my_barplot(area_pixels)    
 my_barplot(area_pixels_forest)# , names.arg = c("non-forest", "forest"))
 my_barplot(area_pixels_forest_type)
-par(mfrow = c(1,1))
+
 ```
 
 <!-- ### Patch metrics -->
 
-The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. `Id` is the patch id, and `category` is the land cover. For more information on the other metrics, go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+The landscape above was analysed and many landscape metrics were produced. The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. For more information on the other metrics, go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics). Additionally, we show the `patch area` and individual `patches`.  
 
-The category map show the land cover classification used in the FLM metrics calculation. This is the land cover map from the Copernicus Global Land Servive ([link](https://land.copernicus.eu/global/products/lc)). For calculating the FLM metrics, only the forest classes are used, and all other layers are treated as a single non-forest category.
+A table with all the metrics is shown at the end.
 
 ```{r echo=FALSE, warning = FALSE, message = FALSE}
 
@@ -149,7 +167,42 @@ par(mfrow = c(1,1))
 
 ```
 
+
+```{r}
+library(DT)
+metrics<- read.csv(path$metrics_ranked) |> 
+    dplyr::relocate(rank_no_ties) |> 
+    dplyr::select(!c(X, rank)) |> 
+    dplyr::rename(rank = rank_no_ties, mean_correlation = mean) |> 
+    dplyr::mutate(across(where(is.numeric), round, 3))
+patch_metrics<- metrics |> filter(level == "patch")
+landscape_metrics<- metrics |> filter(level == "landscape")
+class_metrics<- metrics |> filter(level == "class")
+```
+
+### All calculated metrics
+
+### By patch
+
+```{r}
+datatable(patch_metrics, rownames = FALSE)
+```
+
+### By landscape
+
+```{r}
+datatable(landscape_metrics)
+```
+
+### By class
+
+```{r}
+datatable(class_metrics)
+```
+
+
 <!-- # General Information -->
+## Good to know
 
 The following explanation of the metrics has been widely reused from the following source: [Original](https://r-spatialecology.github.io/landscapemetrics/articles/general_background.html#levels-of-landscape-metrics).
 

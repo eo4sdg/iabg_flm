@@ -58,10 +58,11 @@ calculate_flm <- function(aoi,
 
     landscape <- project_to_m(landscape, tempdir = tempdir)
     aoi<- sf::st_transform(aoi, terra::crs(landscape))
-    landscape<- terra::subst(landscape, NA, 0,
-                             raw = TRUE,
-                             filename = file.path(tempdir, "landscape_no_NA.tif"),
-                             overwrite = TRUE)    # calculate metrics
+    landscape<- select_forest_from_glc_lcc(landscape, all = TRUE)
+    # landscape<- terra::subst(landscape, NA, 0,
+    #                          raw = TRUE,
+    #                          filename = file.path(tempdir, "landscape_no_NA.tif"),
+    #                          overwrite = TRUE)    # calculate metrics
     area_metrics <-
         landscapemetrics::sample_lsm(landscape,
                                      aoi,
@@ -236,7 +237,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
 
     # projection can introduce NAs in the borders!
     # fixed: do projection before classification of forests
-    # landscape<- terra::subst(landscape, as.numeric(NA), -9999,
+    # landscape<- terra::subst(x = landscape, from = as.numeric(NA), to = -9999,
     #                          raw = TRUE,
     #                          filename = file.path(tempdir, "landscape_no_NA.tif"),
     #                          overwrite = TRUE)
@@ -277,6 +278,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
             dplyr::filter(level == "patch") |>
             dplyr::top_n(n = -5, wt = rank_no_ties) |>
             dplyr::pull(metric)
+        wh_metrics<- c(wh_metrics, "area") #Andres recommended to always include
     }
     #sp
     ms <- landscapemetrics::spatialize_lsm(landscape,
