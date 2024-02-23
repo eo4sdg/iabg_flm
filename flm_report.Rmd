@@ -197,9 +197,6 @@ my_barplot(area_pixels_forest_type)
 my_barplot(area_pixels_forest)# , names.arg = c("non-forest", "forest"))
 ```
 
-The landscape above was analysed and many landscape metrics were produced. The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. For more information on the other metrics, go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics). Additionally, we show the `patch area` and individual `patches`.  
-
-A table with all the metrics is shown at the end.
 
 ```{r}
 
@@ -225,66 +222,52 @@ plot_metric<- function(i){
 ```
 
 
-### Maps {.tabset}
+### \ \ {.tabset}
 
-#### Patch Area
+The landscape above was analysed and many landscape metrics were produced. The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. For more information on the other metrics, go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics). Additionally, we show the `patch area` and individual `patches`.  
 
-```{r}
-# pkg_topic("terra", "mask")
+#### `r get_i_filename(plot_files, 1)`
 
-```
-
-```{r}
-metrics_sections<- plot_files
-
-foo<- purrr::map_chr(metrics_sections, get_i_filename)
-
-plot_metric(1)
-```
-
-#### Patches
-
-```{r}
-plot_metric(1)
-```
-
-#### Metric: `r get_i_filename(plot_files, 1)`
-
-
+For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
 ```{r}
 plot_metric(1)
 ```
 
 
-#### Metric: `r get_i_filename(plot_files, 2)`
+#### `r get_i_filename(plot_files, 2)`
 
-
+For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
 ```{r}
 plot_metric(2)
 ```
 
-#### Metric: `r get_i_filename(plot_files, 3)`
+#### `r get_i_filename(plot_files, 3)`
 
-
+For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
 ```{r}
 plot_metric(3)
 ```
 
-#### Metric: `r get_i_filename(plot_files, 4)`
+#### `r get_i_filename(plot_files, 4)`
 
-
+For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
 ```{r}
 plot_metric(4)
 ```
 
-#### Metric: `r get_i_filename(plot_files, 5)`
+#### `r get_i_filename(plot_files, 5)`
 
-
+For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
 ```{r}
 plot_metric(5)
 ```
 
+#### `r get_i_filename(plot_files, 6)`
 
+For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+```{r}
+plot_metric(6)
+```
 
 
 
@@ -300,7 +283,9 @@ landscape_metrics<- metrics |> filter(level == "landscape")
 class_metrics<- metrics |> filter(level == "class")
 ```
 
-### Tables {.tabset}
+### \ \ {.tabset}
+
+The following are all the metrics calculated, by landscpape levels: `patch`, `landscape`, and `class`. 
 
 #### By patch
 
