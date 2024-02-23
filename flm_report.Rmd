@@ -13,8 +13,7 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE, 
                       tidy = TRUE, 
                       fig.width = 7, 
-                      out.width = "\\textwidth", 
-                      fig.pos = "middle")
+                      out.width = "\\textwidth")
 
 
 ```
@@ -100,7 +99,7 @@ Internally, the land cover map from the Copernicus Global Land Servive  is used 
 
 Spatially and in terms of area (ha), they are distributed as follows:
 
-```{r}
+```{r fig.width = 10}
 ggcolors<- my_coltab |> dplyr::mutate(hex = grDevices::rgb(red, green, blue, maxColorValue = 255)) |> 
     dplyr::inner_join(terra::levels(r_masked)[[1]], by = dplyr::join_by(value == ID))
 color_forest<- grDevices::rgb(78,117, 31, maxColorValue = 255)
@@ -126,10 +125,49 @@ my_barplot<- function(data, ...){
         legend.position = "right")
 }
 
+add_north_arrow_and_scale<- list(annotation_north_arrow(
+    which_north = TRUE,
+    pad_x = unit(0.8, "npc"),
+    pad_y = unit(0.75, "npc"),
+    style = north_arrow_fancy_orienteering()
+  ),
+  annotation_scale(
+    height = unit(0.015, "npc"),
+    width_hint = 0.5,
+    pad_x = unit(0.07, "npc"),
+    pad_y = unit(0.07, "npc"),
+    text_cex = .8
+  ))
+
+add_aoi_and_gadm <- list(geom_spatvector(aes(col = my_aoi_col), fill = NA, data = aoi, lwd = .8, alpha = .6),
+    geom_spatvector(aes(col = my_adm_col), data = tmp_adm_data,
+                    legend = "polygon", fill = NA,lwd = 1, alpha = .6), 
+    geom_spatvector_text(aes(label = NAME_2 ), data = tmp_adm_data, fontface = "bold",
+                         color = "black"),
+    geom_spatvector(data = tmp_adm_data_border, fill = NA, col = "black",lwd = 1),
+    theme(legend.title = element_blank()),
+    labs(x = "", y = "") )
+
 r<- select_forest_from_glc_lcc(r, all =TRUE)
-plot(r, plg = list(loc = "bottom"))
-lines(aoi, col = "red", lwd = 2, alpha = 0.6)
-lines(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))], lwd = 2.5, alpha = 0.5)
+aoi<- aoi |> terra::project(r)
+
+#this objects are assumed for plotting aoi and gadm --# Żadnych pytań!!!
+my_aoi_col<- c("red" = "Area of \nInterest")
+my_adm_col<- c("black" = "Administrative \nBoundaries")
+tmp_adm_data <- terra::crop(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))],aoi, ext = TRUE)
+tmp_adm_data_border<- aoi |> ext() |> vect()
+crs(tmp_adm_data_border)<- crs(aoi)
+
+ggplot2::ggplot() + 
+    geom_spatraster(data = r) + 
+    theme_minimal() + 
+    add_aoi_and_gadm + 
+    add_north_arrow_and_scale 
+
+# original basic plot:
+# plot(r)
+# lines(aoi, col = "red", lwd = 2, alpha = 0.6)
+# lines(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))], lwd = 2.5, alpha = 0.5)
 
 my_barplot(area_pixels)    
 my_barplot(area_pixels_forest)# , names.arg = c("non-forest", "forest"))
@@ -143,30 +181,35 @@ The landscape above was analysed and many landscape metrics were produced. The t
 
 A table with all the metrics is shown at the end.
 
-```{r echo=FALSE, warning = FALSE, message = FALSE}
+```{r}
 
 plot_crs <- terra::rast(plot_files[1]) |> terra::crs()
 aoi<- aoi |> terra::project(plot_crs)
-my_adm_bound <- aoi |> sf::st_as_sf() |> st_where_is(tempdir = path$proc_dir)
-adm_bound <- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 2)
+adm_bound<- aoi |> terra::project(plot_crs)
 
-adm_bound <- adm_bound |> terra::project(terra::crs(aoi)) |> 
-    terra::crop(terra::ext(aoi))
-
-par(mfrow = c(2,2))
-for (i in 1:length(plot_files)) {
-    tmp_name <- fs::path_file(plot_files[i]) |> 
-        fs::path_ext_remove()
+get_i_filename <- function(x, i) fs::path_file(x[i]) |> fs::path_ext_remove() |> gsub("_", " ", x = _)
+plot_metric<- function(i){
+    tmp_name<- get_i_filename(plot_files, i)
     tmp <- terra::rast(plot_files[i])
     if(tmp_name == "category") coltab(tmp) <- my_coltab
-    plot(tmp,main = tmp_name)
-    lines(aoi, col = "red", alpha = 0.6)
-    lines(adm_bound, lwd = 2.5, alpha = 0.5)
+    
+    ggplot() + 
+        geom_spatraster(data = tmp) + 
+        theme_minimal() + 
+        scale_fill_gradientn(trans = "log", na.value="white", colours = terrain.colors(20)) + 
+        add_aoi_and_gadm + 
+        add_north_arrow_and_scale + 
+        labs(title = tmp_name)
+            
 }
-par(mfrow = c(1,1))
 
 ```
+### Metric: `r get_i_filename(plot_files, 1)`
 
+
+```{r}
+plot_metric(1)
+```
 
 ```{r}
 library(DT)
