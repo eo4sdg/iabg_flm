@@ -276,6 +276,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     if(!missing(ranks) && inherits(ranks, "data.frame")){ # ranks was converted from chr to df at beginning...
         wh_metrics <- ranks |>
             dplyr::filter(level == "patch") |>
+            dplyr::filter(metric != "gyrate") |>
             dplyr::top_n(n = -5, wt = rank_no_ties) |>
             dplyr::pull(metric)
         wh_metrics<- c(wh_metrics, "area") #Andres recommended to always include
