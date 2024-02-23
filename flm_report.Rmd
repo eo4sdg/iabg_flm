@@ -20,9 +20,6 @@ knitr::opts_chunk$set(echo = FALSE,
 
 
 # Forest Landscape Metrics (FLM) {.tabset}
-
-## Results
-
 ```{r, echo = FALSE}
 plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE) |> 
     grep("id.tif", x = _, invert = TRUE, fixed = TRUE, value = TRUE) |> 
@@ -42,6 +39,10 @@ my_coltab<- rbind(my_coltab, c(value = -9999, 180,180,180,255))
 
 
 ```
+
+## `r country_adm$COUNTRY |> unique() |> paste0(collapse = ", ")`
+
+
 This section summarizes the results for the chosen AOI, located in the district/municipality(ies) of **`r unique(adm_bound$NAME_2)`**, in the state(s)/province(s) of **`r unique(adm_bound$NAME_1)`**, in the country(ies) of **`r unique(adm_bound$COUNTRY[1])`**, respectively. 
 
 ```{r}
@@ -99,7 +100,7 @@ Internally, the land cover map from the Copernicus Global Land Servive  is used 
 
 Spatially and in terms of area (ha), they are distributed as follows:
 
-```{r fig.width = 10}
+```{r}
 ggcolors<- my_coltab |> dplyr::mutate(hex = grDevices::rgb(red, green, blue, maxColorValue = 255)) |> 
     dplyr::inner_join(terra::levels(r_masked)[[1]], by = dplyr::join_by(value == ID))
 color_forest<- grDevices::rgb(78,117, 31, maxColorValue = 255)
@@ -152,30 +153,49 @@ r<- select_forest_from_glc_lcc(r, all =TRUE)
 aoi<- aoi |> terra::project(r)
 
 #this objects are assumed for plotting aoi and gadm --# Żadnych pytań!!!
-my_aoi_col<- c("red" = "Area of \nInterest")
-my_adm_col<- c("black" = "Administrative \nBoundaries")
+my_aoi_col<- c("red" = "area of \ninterest")
+my_adm_col<- c("black" = "administrative \nboundaries")
 tmp_adm_data <- terra::crop(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))],aoi, ext = TRUE)
 tmp_adm_data_border<- aoi |> ext() |> vect()
 crs(tmp_adm_data_border)<- crs(aoi)
+```
 
+
+
+```{r fig.width = 10}
+
+
+levels(r)[[1]]$category<- levels(r)[[1]]$category |> gsub("_", " ", x = _)
 ggplot2::ggplot() + 
     geom_spatraster(data = r) + 
     theme_minimal() + 
     add_aoi_and_gadm + 
-    add_north_arrow_and_scale 
-
+    add_north_arrow_and_scale
 # original basic plot:
 # plot(r)
 # lines(aoi, col = "red", lwd = 2, alpha = 0.6)
 # lines(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))], lwd = 2.5, alpha = 0.5)
+```
 
+### Distribution {.tabset}
+
+#### By Land cover
+
+```{r}
 my_barplot(area_pixels)    
-my_barplot(area_pixels_forest)# , names.arg = c("non-forest", "forest"))
+```
+
+#### By Forest Type
+```{r}
 my_barplot(area_pixels_forest_type)
 
 ```
 
-<!-- ### Patch metrics -->
+#### By Forest Cover
+
+```{r}
+my_barplot(area_pixels_forest)# , names.arg = c("non-forest", "forest"))
+```
 
 The landscape above was analysed and many landscape metrics were produced. The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. For more information on the other metrics, go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics). Additionally, we show the `patch area` and individual `patches`.  
 
@@ -194,22 +214,79 @@ plot_metric<- function(i){
     if(tmp_name == "category") coltab(tmp) <- my_coltab
     
     ggplot() + 
-        geom_spatraster(data = tmp) + 
+        geom_spatraster(data = round(tmp,2)) + 
         theme_minimal() + 
-        scale_fill_gradientn(trans = "log", na.value="white", colours = terrain.colors(20)) + 
+        scale_fill_gradientn(trans = "log", labels = number_format(digits = 2), na.value="white", colours = terrain.colors(20, rev = TRUE)) + 
         add_aoi_and_gadm + 
         add_north_arrow_and_scale + 
         labs(title = tmp_name)
-            
 }
 
 ```
-### Metric: `r get_i_filename(plot_files, 1)`
+
+
+### Maps {.tabset}
+
+#### Patch Area
+
+```{r}
+# pkg_topic("terra", "mask")
+
+```
+
+```{r}
+metrics_sections<- plot_files
+
+foo<- purrr::map_chr(metrics_sections, get_i_filename)
+
+plot_metric(1)
+```
+
+#### Patches
+
+```{r}
+plot_metric(1)
+```
+
+#### Metric: `r get_i_filename(plot_files, 1)`
 
 
 ```{r}
 plot_metric(1)
 ```
+
+
+#### Metric: `r get_i_filename(plot_files, 2)`
+
+
+```{r}
+plot_metric(2)
+```
+
+#### Metric: `r get_i_filename(plot_files, 3)`
+
+
+```{r}
+plot_metric(3)
+```
+
+#### Metric: `r get_i_filename(plot_files, 4)`
+
+
+```{r}
+plot_metric(4)
+```
+
+#### Metric: `r get_i_filename(plot_files, 5)`
+
+
+```{r}
+plot_metric(5)
+```
+
+
+
+
 
 ```{r}
 library(DT)
@@ -223,21 +300,21 @@ landscape_metrics<- metrics |> filter(level == "landscape")
 class_metrics<- metrics |> filter(level == "class")
 ```
 
-### All calculated metrics
+### Tables {.tabset}
 
-### By patch
+#### By patch
 
 ```{r}
 datatable(patch_metrics, rownames = FALSE)
 ```
 
-### By landscape
+#### By landscape
 
 ```{r}
 datatable(landscape_metrics)
 ```
 
-### By class
+#### By class
 
 ```{r}
 datatable(class_metrics)
