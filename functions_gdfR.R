@@ -259,7 +259,7 @@ setMethod("utm_zone", signature(x="SpatRaster", y="missing"),
 
 st_where_is <- function (x, desc = "NAME_0", tempdir) {
     world<- geodata::world(path = tempdir)
-    sf_use_s2(FALSE) # NEEDED!!
+    sf::sf_use_s2(FALSE) # NEEDED!!
     if (!st_crs_equal(x, world)) x <- sf::st_transform(x, sf::st_crs(world))
     sf::st_drop_geometry(sf::st_intersection(sf::st_as_sf(world), x)[, desc])
 }

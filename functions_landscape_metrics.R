@@ -230,7 +230,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     #get administrative boundaries if needed, up to level 1, i.e., country and state boundaries
     if(missing(gadm)){
         my_adm_bound <- aoi |> sf::st_as_sf() |> st_where_is(tempdir = tempdir)
-        adm_bound <- geodata::gadm(my_adm_bound, path = tempdir, level = 2)
+        adm_bound <- geodata::gadm(paste0(unname(unlist(my_adm_bound))), path = tempdir, level = 2)
         adm_bound <- adm_bound |> terra::project(terra::crs(aoi))
     }
 

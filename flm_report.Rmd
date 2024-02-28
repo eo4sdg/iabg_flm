@@ -1,5 +1,5 @@
 ---
-title: ""
+title: "Forest Landscape Metrics (FLM) "
 author: "IABG EO TEAM"
 date: "2024"
 output: html_document
@@ -19,7 +19,7 @@ knitr::opts_chunk$set(echo = FALSE,
 ```
 
 
-# Forest Landscape Metrics (FLM) {.tabset}
+# \ \ {.tabset}
 ```{r, echo = FALSE}
 plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE) |> 
     grep("id.tif", x = _, invert = TRUE, fixed = TRUE, value = TRUE) |> 
@@ -29,8 +29,8 @@ plot_files <- list.files(plotdir, "\\.tif$", full.names = TRUE) |>
 plot_crs <- terra::rast(plot_files[1]) |> terra::crs()
 aoi<- aoi |> terra::project(plot_crs)
 my_adm_bound <- aoi |> sf::st_as_sf() |> st_where_is(tempdir = path$proc_dir)
-adm_bound_all <- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 2)
-country_adm<- geodata::gadm(my_adm_bound, path = path$proc_dir, level = 0)
+adm_bound_all <- geodata::gadm(paste0(unname(unlist(my_adm_bound))), path = path$proc_dir, level = 2)
+country_adm<- geodata::gadm(paste0(unname(unlist(my_adm_bound))), path = path$proc_dir, level = 0)
 adm_bound <- adm_bound_all |> terra::project(terra::crs(aoi)) |> 
     terra::crop(terra::ext(aoi))
 
@@ -62,7 +62,7 @@ r_masked_forest_types<- r_masked |> select_forest_from_glc_lcc()
 
 area_pixels<- terra::expanse(r_masked, unit = "ha", transform = TRUE, byValue = TRUE)
 area_pixels_forest<- terra::expanse(r_masked_forest, unit = "ha", transform = TRUE, byValue = TRUE) |> round(2) |> 
-    mutate(value = ifelse(value == 0,"no_forest", "forest"))
+    dplyr::mutate(value = ifelse(value == 0,"no_forest", "forest"))
 area_pixels_forest_type<- terra::expanse(r_masked_forest_types, unit = "ha", transform = TRUE, byValue = TRUE) |> 
     dplyr::filter(value != "no_forest")
 
@@ -126,13 +126,13 @@ my_barplot<- function(data, ...){
         legend.position = "right")
 }
 
-add_north_arrow_and_scale<- list(annotation_north_arrow(
+add_north_arrow_and_scale<- list(ggspatial::annotation_north_arrow(
     which_north = TRUE,
-    pad_x = unit(0.8, "npc"),
-    pad_y = unit(0.75, "npc"),
-    style = north_arrow_fancy_orienteering()
+    pad_x = grid::unit(0.8, "npc"),
+    pad_y = grid::unit(0.75, "npc"),
+    style = ggspatial::north_arrow_fancy_orienteering()
   ),
-  annotation_scale(
+  ggspatial::annotation_scale(
     height = unit(0.015, "npc"),
     width_hint = 0.5,
     pad_x = unit(0.07, "npc"),
@@ -140,14 +140,7 @@ add_north_arrow_and_scale<- list(annotation_north_arrow(
     text_cex = .8
   ))
 
-add_aoi_and_gadm <- list(geom_spatvector(aes(col = my_aoi_col), fill = NA, data = aoi, lwd = .8, alpha = .6),
-    geom_spatvector(aes(col = my_adm_col), data = tmp_adm_data,
-                    legend = "polygon", fill = NA,lwd = 1, alpha = .6), 
-    geom_spatvector_text(aes(label = NAME_2 ), data = tmp_adm_data, fontface = "bold",
-                         color = "black"),
-    geom_spatvector(data = tmp_adm_data_border, fill = NA, col = "black",lwd = 1),
-    theme(legend.title = element_blank()),
-    labs(x = "", y = "") )
+
 
 r<- select_forest_from_glc_lcc(r, all =TRUE)
 aoi<- aoi |> terra::project(r)
@@ -156,8 +149,17 @@ aoi<- aoi |> terra::project(r)
 my_aoi_col<- c("red" = "area of \ninterest")
 my_adm_col<- c("black" = "administrative \nboundaries")
 tmp_adm_data <- terra::crop(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))],aoi, ext = TRUE)
-tmp_adm_data_border<- aoi |> ext() |> vect()
-crs(tmp_adm_data_border)<- crs(aoi)
+tmp_adm_data_border<- aoi |> terra::ext() |> terra::vect()
+terra::crs(tmp_adm_data_border)<- terra:crs(aoi)
+
+add_aoi_and_gadm <- list(tidyterra::geom_spatvector(ggplot2::aes(col = my_aoi_col), fill = NA, data = aoi, lwd = .8, alpha = .6),
+    tidyterra::geom_spatvector(ggplot2::aes(col = my_adm_col), data = tmp_adm_data,
+                    legend = "polygon", fill = NA,lwd = 1, alpha = .6), 
+    tidyterra::geom_spatvector_text(ggplot2::aes(label = NAME_2 ), data = tmp_adm_data, fontface = "bold",
+                         color = "black"),
+    tidyterra::geom_spatvector(data = tmp_adm_data_border, fill = NA, col = "black",lwd = 1),
+    ggplot2::theme(legend.title = ggplot2::element_blank()),
+    ggpglot2::labs(x = "", y = "") )
 ```
 
 
@@ -167,8 +169,8 @@ crs(tmp_adm_data_border)<- crs(aoi)
 
 levels(r)[[1]]$category<- levels(r)[[1]]$category |> gsub("_", " ", x = _)
 ggplot2::ggplot() + 
-    geom_spatraster(data = r) + 
-    theme_minimal() + 
+    tidyterra::geom_spatraster(data = r) + 
+    ggplot2::theme_minimal() + 
     add_aoi_and_gadm + 
     add_north_arrow_and_scale
 # original basic plot:
@@ -208,16 +210,48 @@ get_i_filename <- function(x, i) fs::path_file(x[i]) |> fs::path_ext_remove() |>
 plot_metric<- function(i){
     tmp_name<- get_i_filename(plot_files, i)
     tmp <- terra::rast(plot_files[i])
-    if(tmp_name == "category") coltab(tmp) <- my_coltab
+    if(tmp_name == "category") terra::coltab(tmp) <- my_coltab
     
-    ggplot() + 
-        geom_spatraster(data = round(tmp,2)) + 
-        theme_minimal() + 
-        scale_fill_gradientn(trans = "log", labels = number_format(digits = 2), na.value="white", colours = terrain.colors(20, rev = TRUE)) + 
+    ggplot2::ggplot() + 
+        tidyterra::geom_spatraster(data = tmp) + 
+        ggplot2::theme_minimal() + 
+        ggplot2::scale_fill_gradientn(trans = "log", labels = scales::number_format(digits = 2), na.value="white", colours = grDevices::terrain.colors(20, rev = TRUE)) + 
         add_aoi_and_gadm + 
         add_north_arrow_and_scale + 
-        labs(title = tmp_name)
+        ggplot2::labs(title = tmp_name)
 }
+
+plot_aggregate_metric<- function(i, r){
+    tmp_name<- get_i_filename(plot_files, i)
+    tmp <- terra::rast(plot_files[i])
+    r_forest_types<- r |> terra::project(terra::crs(tmp)) |> select_forest_from_glc_lcc()
+
+    if(tmp_name == "category") terra::coltab(tmp) <- my_coltab
+    all_level_info<- terra::levels(r_forest_types)[[1]] |> dplyr::filter(ID >= 0)
+    active_levels<- r_forest_types |> terra::values() |> unique() |> as.integer()
+    active_levels<- active_levels[active_levels>=0]
+    barplot_data<- tibble::tibble(x = character(), y = numeric())
+    
+    for (j in 1:length(active_levels)){
+        barplot_data[j,1]<- all_level_info |> dplyr::filter(ID == active_levels[j]) |> dplyr::pull(category)
+        barplot_data[j,2]<- terra::mask(tmp, r_forest_types, inverse = TRUE, maskvalues = active_levels[j]) |> 
+            terra::global(mean, na.rm = TRUE) |> unlist() |> unname()
+    }
+    
+    barplot_data |> 
+        ggplot2::ggplot() + 
+        ggplot2::geom_bar(ggplot2::aes(x = x, y = y, fill = x), 
+             stat = "identity") + 
+        ggplot2::theme_minimal() + 
+        my_fill_scale + 
+        ggplot2::labs(x = "", y = "average", fill = "") + 
+        ggplot2::theme(axis.title.x=ggplot2::element_blank(),
+            axis.text.x=ggplot2::element_blank(),
+            axis.ticks.x=ggplot2::element_blank(),
+            legend.title = ggplot2::element_blank(),
+            legend.position = "right")
+}
+
 
 ```
 
@@ -226,61 +260,87 @@ plot_metric<- function(i){
 
 The landscape above was analysed and many landscape metrics were produced. The top 5 `patch` metrics where selected for creating maps. The `patch` metrics calculated were: **`r plot_files |> fs::path_file() |> fs::path_ext_remove() |> gsub("_", " ", x = _) |> paste0(collapse = ", ")`**. For more information on the other metrics, go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics). Additionally, we show the `patch area` and individual `patches`.  
 
+```{r}
+# get_descr_and_details<- function(metric_name){
+#     # only for landscapemetrics! 
+#     names <-
+#         landscapemetrics::list_lsm() %>%
+#         dplyr::distinct(metric, .keep_all = TRUE)
+#     fn_name<- names |> 
+#         dplyr::filter(name == metric_name |> gsub("_", " ", x = _), 
+#                level == "patch") |>
+#         dplyr::select(function_name) |> unlist() |> unname()
+#     
+#     Rd<- file.path(find.package("landscapemetrics"), "help", "landscapemetrics")
+#     rdb <- tools:::fetchRdDB(Rd, key = fn_name) # |> 
+#     
+#     a<- Rd2md::parseRd(rdb)
+# 
+#     a$details<- a$details |>  gsub("list\\(list", "* ", x = _) |> gsub("list\\(", "* ", x = _) |> 
+#         gsub("\\)", "", x = _) |> gsub("\\(", "", x = _)
+#     a$details |> Rd2md:::parseTag()
+#     return(list(description = a$description, details = a$details))    
+# }
+
+
+```
+
+
 #### `r get_i_filename(plot_files, 1)`
 
 For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+
 ```{r}
 plot_metric(1)
+plot_aggregate_metric(1, r)
 ```
 
 
 #### `r get_i_filename(plot_files, 2)`
 
 For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+
 ```{r}
 plot_metric(2)
+plot_aggregate_metric(2, r)
 ```
 
 #### `r get_i_filename(plot_files, 3)`
 
 For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+
 ```{r}
 plot_metric(3)
+plot_aggregate_metric(3, r)
 ```
 
 #### `r get_i_filename(plot_files, 4)`
 
 For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+
 ```{r}
 plot_metric(4)
+plot_aggregate_metric(4, r)
 ```
 
 #### `r get_i_filename(plot_files, 5)`
 
 For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
+
 ```{r}
 plot_metric(5)
+plot_aggregate_metric(5, r)
 ```
 
-#### `r get_i_filename(plot_files, 6)`
-
-For more information go [here](https://r-spatialecology.github.io/landscapemetrics/reference/index.html#patch-level-metrics).
 ```{r}
-plot_metric(6)
-```
-
-
-
-```{r}
-library(DT)
 metrics<- read.csv(path$metrics_ranked) |> 
     dplyr::relocate(rank_no_ties) |> 
     dplyr::select(!c(X, rank)) |> 
     dplyr::rename(rank = rank_no_ties, mean_correlation = mean) |> 
-    dplyr::mutate(across(where(is.numeric), round, 3))
-patch_metrics<- metrics |> filter(level == "patch")
-landscape_metrics<- metrics |> filter(level == "landscape")
-class_metrics<- metrics |> filter(level == "class")
+    dplyr::mutate(across(where(is.numeric), round, 2))
+patch_metrics<- metrics |> dplyr::filter(level == "patch")
+landscape_metrics<- metrics |> dplyr::filter(level == "landscape")
+class_metrics<- metrics |> dplyr::filter(level == "class")
 ```
 
 ### \ \ {.tabset}
@@ -290,23 +350,22 @@ The following are all the metrics calculated, by landscpape levels: `patch`, `la
 #### By patch
 
 ```{r}
-datatable(patch_metrics, rownames = FALSE)
+DT::datatable(patch_metrics, rownames = FALSE)
 ```
 
 #### By landscape
 
 ```{r}
-datatable(landscape_metrics)
+DT::datatable(landscape_metrics, rownames = FALSE)
 ```
 
 #### By class
 
 ```{r}
-datatable(class_metrics)
+DT::datatable(class_metrics, rownames = FALSE)
 ```
 
 
-<!-- # General Information -->
 ## Good to know
 
 The following explanation of the metrics has been widely reused from the following source: [Original](https://r-spatialecology.github.io/landscapemetrics/articles/general_background.html#levels-of-landscape-metrics).
@@ -316,8 +375,6 @@ Ecology and landscape ecology mainly studies interactions between organisms and 
 
 Landscape metrics are tools to characterize a landscape. This includes mainly describing the composition and configuration of a landscape. While the composition basically describes how much of the landscape is occupied by a certain land cover type, the configuration mainly describes the spatial arrangement of the land cover types. The basic idea of landscape metrics is to condense as much information as possible into single number.
 
-<!-- ## Levels of metrics -->
-
 **Landscape metrics** can be calculated for three different levels (or "scales"). Each level contains information about different aspects of the landscape. Level of interest depends largely on the research question, and often a combination of several levels can be useful. Similar, also the decision of which metric to use depends on the research question asked.
 
 **Patch level metrics**. A patch is defined as neighboring cells belonging to the same class i. Hereby, the metrics use the 8-neighbors rule (Queen's case) to identify patches. Patch level metrics are calculated for every patch in the landscape, regardless of the class that the patch belongs to. The output will match the number of patches present in the landscape. These metrics are also often the basis for metrics of the other two levels.
@@ -325,8 +382,6 @@ Landscape metrics are tools to characterize a landscape. This includes mainly de
 **Class level metrics** summarizes all patches belonging to one class i. These metrics can be either the "distribution" of patch level metrics of all patches of class i (e.g., the mean) or consider only patches of class i for the calculations of the metric. Regardless of the mathematical background, the output will always match the number of classes present. Class level metrics are suitable to describe the composition and configuration of the landscape.
 
 **Landscape level metrics** summarizes the whole landscape into one value. This can either be done by summarizing metrics of lower levels or calculating a metric including all patches and classes. Following, the output will always be just one number. Landscape level metrics are suitable for condensing information about the landscape into just one value.
-
-<!-- ## Classes of landscape metrics -->
 
 There are six different classes of landscape metrics implemented:
 
