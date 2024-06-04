@@ -71,7 +71,7 @@ path_to_glc_forest_tiles<- function(glc_folders_eodata, polygon_wkt, crs_wkt, sp
 }
 
 # Merge if AOI is in more than 1 tile, if not just pass the 1 tile
-merge_raster_from_paths <- function(paths, output_path, ...){
+ merge_raster_from_paths <- function(paths, output_path, ...){
     rasters <- lapply(paths, terra::rast)
     if (length(rasters) > 1) {
         merged_raster <- do.call(terra::merge, rasters)

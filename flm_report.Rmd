@@ -90,6 +90,7 @@ par(mfrow = c(1,1))
 <!-- ### Exploratory Data Analysis -->
 
 ```{r, echo = FALSE}
+
  forest_perc<- (100*area_pixels_forest$area[2]/(area_pixels_forest$area[2]+area_pixels_forest$area[1])) |> round(2)
 forest_type_perc<- area_pixels_forest_type |> dplyr::mutate(total_area = sum(area), perc = round(100*area/total_area,2))
 ```
@@ -150,7 +151,7 @@ my_aoi_col<- c("red" = "area of \ninterest")
 my_adm_col<- c("black" = "administrative \nboundaries")
 tmp_adm_data <- terra::crop(adm_bound_all[(adm_bound_all$NAME_1 %in% unique(adm_bound$NAME_1))],aoi, ext = TRUE)
 tmp_adm_data_border<- aoi |> terra::ext() |> terra::vect()
-terra::crs(tmp_adm_data_border)<- terra:crs(aoi)
+terra::crs(tmp_adm_data_border)<- terra::crs(aoi)
 
 add_aoi_and_gadm <- list(tidyterra::geom_spatvector(ggplot2::aes(col = my_aoi_col), fill = NA, data = aoi, lwd = .8, alpha = .6),
     tidyterra::geom_spatvector(ggplot2::aes(col = my_adm_col), data = tmp_adm_data,
@@ -159,7 +160,7 @@ add_aoi_and_gadm <- list(tidyterra::geom_spatvector(ggplot2::aes(col = my_aoi_co
                          color = "black"),
     tidyterra::geom_spatvector(data = tmp_adm_data_border, fill = NA, col = "black",lwd = 1),
     ggplot2::theme(legend.title = ggplot2::element_blank()),
-    ggpglot2::labs(x = "", y = "") )
+    ggplot2::labs(x = "", y = "") )
 ```
 
 
