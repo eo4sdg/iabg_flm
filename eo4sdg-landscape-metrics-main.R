@@ -42,10 +42,11 @@ path <- list(aoi = "data/aoi/aoi_gadm_test.shp", ## we can switch it to WKT POLY
 
 
 #polygon_wkt <- "POLYGON ((9.98457 50.554256, 9.98457 50.602839, 10.05744 50.602839, 10.05744 50.554256, 9.98457 50.554256))" # for now imported as user input
+#polygon_wkt <-"POLYGON((10.548992163967341 50.87698405696199,10.593242640607059 50.92182942965971,10.687541984952986 50.878331967043295,10.612163529731333 50.85001755478288,10.543193835765122 50.87101424577642,10.548992163967341 50.87698405696199))"
 polygon_wkt_sf <- sf::st_as_sfc(polygon_wkt)
 aoi <- terra::vect(polygon_wkt_sf)
 terra::crs(aoi) <- "EPSG:4326"
-aoi<- st_as_sf(aoi)
+aoi<- sf::st_as_sf(aoi)
 
 ##########################################################################################################################################################
 # Load functions from R scripts -------------------------------------------
@@ -80,50 +81,33 @@ print(paste0("These are the files: ", paste0(files, collapse = ",\n")))
 
 ############################### END CODE TO GET FOREST MASK TILES ######################################
 ##########################################################################################################################################################
+#
+tempdir <- path$proc_dir
+lc<- terra::rast(glc_path)
+aoi<- sf::st_transform(aoi, terra::crs(lc))
+print("croping")
 
+landscape <- terra::crop(lc,
+                         aoi,
+                         mask = TRUE,
+                         filename = file.path(tempdir, "lc_from_aoi.tif"),
+                         overwrite = TRUE)
+print("project to m")
+landscape <- project_to_m(landscape, tempdir = tempdir)
+aoi<- sf::st_transform(aoi, terra::crs(landscape))
+print("get forest classes")
+lc_forest_2019 <- select_forest_from_glc_lcc(landscape, all = FALSE, binary = FALSE)
 
+print("calculate patch metrics")
+lm_2019 <- landscapemetrics::spatialize_lsm(lc_forest_2019,
+                                            level = "patch",
+                                            metric = get_patch_metric_names() ,
+                                            to_disk = TRUE)
+print("calculate diversity metric")
+di_2019 <- landscapemetrics::lsm_l_shdi(lc_forest_2019)
 
-##### calculate forest landscape metrics ---------------------------------------
-message("starting calculating_fm()")
-crs(rast(glc_path))
-
-calculate_flm(aoi, lc = glc_path, tempdir = path$proc_dir, outdir = output_files_path)
-path$metrics <- file.path(output_files_path, "metrics.csv")
-
-##### apply selection methods --------------------------------------------------
-message("starting calc_beta_rank()")
-calc_beta_rank(df = path$metrics, outdir = output_files_path)
-path$metrics_ranked <- file.path(output_files_path, "metrics_ranked.csv")
-
-
-make_metric_maps(landscape = glc_path,
-                 aoi = aoi,
-                 ranks = path$metrics_ranked,
-                 tempdir = path$proc_dir,
-                 plotdir = output_files_path)
-
-# ##### generate maps of the selected metrics ------------------------------------
-#message("starting make_metric_maps()")
-#make_metric_maps(landscape = glc_path, aoi = aoi, tempdir = path$proc_dir, plotdir = output_files_path)
-#print("maps created")
-path$metrics_maps <- file.path(output_files_path, "plots.pdf") # output tbd
-# print(list.files(recursive = TRUE))
-# ##### end ----------------------------------------------------------------------
-
-
-
-
-
-Sys.getenv("RSTUDIO_PANDOC")
-#file.copy(rmarkdown::pandoc_exec(), "/usr/local/bin/pandoc", overwrite = TRUE)
-
-rmarkdown::pandoc_available()
-
-plotdir <- output_files_path
-
-
-
-aoi<- terra::vect(aoi)
-rmarkdown::render(file.path(workflow_dir, "flm_report.Rmd"),
-       output_dir = output_files_path,
-       output_format = NULL)
+print("saving outputs")
+out <- terra::rast(lm_2019$layer_1) |> mask(aoi)
+terra::writeRaster(out,
+                   filename = file.path(output_files_path, "flm_2019.tif"))
+write.csv(di_2019, file = file.path(output_files_path, "diversity_index_2019.csv"))

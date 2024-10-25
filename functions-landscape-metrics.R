@@ -53,6 +53,7 @@ calculate_flm <- function(aoi,
     aoi<- sf::st_transform(aoi, terra::crs(lc))
     landscape <- terra::crop(lc,
                       aoi,
+                      mask = TRUE,
                       filename = file.path(tempdir, "lc_from_aoi.tif"),
                       overwrite = TRUE)
 
@@ -208,7 +209,7 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
                             ranks, # path to ranked metrics csv
                             gadm,
                             tempdir = "data/temp", # where should temp data be saved
-                            plotdir,
+                            plotdir, # used as outdir for fit
                             ...){ # NOT IMPLEMENTED: extra arguments for writeRaster
     if(inherits(landscape, "character")){
         landscape <- terra::rast(landscape)
@@ -277,9 +278,9 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
         wh_metrics <- ranks |>
             dplyr::filter(level == "patch") |>
             dplyr::filter(metric != "gyrate") |>
-            dplyr::top_n(n = -5, wt = rank_no_ties) |>
+            # dplyr::top_n(n = -5, wt = rank_no_ties) |>
             dplyr::pull(metric)
-        wh_metrics<- c(wh_metrics, "area") #Andres recommended to always include
+        # wh_metrics<- c(wh_metrics, "area") #Andres recommended to always include
     }
     #sp
     ms <- landscapemetrics::spatialize_lsm(landscape,
@@ -294,6 +295,11 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
 
     # multiband raster
     ms <- terra::rast(ms$layer_1)
+
+    # save each raster
+    terra::writeRaster(ms,
+                       filename = file.path(plotdir, "flm_2019.tif"))
+    return("tif files saved") # below not needed for final product
     ms2 <- c(patches, landscape, ms)
 
     # generate a pdf of the maps -----------------------------------------------
@@ -375,7 +381,7 @@ project_to_m<- function(x, tempdir = "data/temp"){
     # https://nsidc.org/data/user-resources/help-center/guide-ease-grids
 }
 
-select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE, all = FALSE){
+select_forest_from_glc_lcc <- function(x, tempdir = "./", binary = FALSE, all = FALSE){
     # set binary to TRUE if you just want a 1,0 (forest/no forest) mask , e.g., for disturbance
     # here we assume the land cover class leayer as in
     # https://land.copernicus.eu/global/sites/cgls.vito.be/files/products/CGLOPS1_PUM_LC100m-V3_I3.4.pdf
@@ -408,14 +414,14 @@ select_forest_from_glc_lcc <- function(x, tempdir = "data/temp", binary = FALSE,
     if(all) return(x |> terra::categories(value = forest_map_code))
     if(binary){
         out<- terra::ifel(x %in% 111:126, 1, 0,
-                   filename = file.path(tempdir, "forest_mask.tif"),
-                   overwrite = TRUE)
-    } else{
+                          filename = file.path(tempdir, "forest_mask.tif"),
+                          overwrite = TRUE)
+    } else{ # return forest classes
         out<- terra::ifel(x %in% 111:126, x, -9999,
-                   filename = file.path(tempdir, "forest_mask_tmp.tif"),
-                   overwrite = TRUE) |>
-            terra::categories(value = forest_map_code) |>
-            terra::writeRaster("forest_mask.tif", overwrite = TRUE)
+                          filename = file.path(tempdir, "forest_mask_tmp.tif"),
+                          overwrite = TRUE) # |>
+            # terra::categories(value = forest_map_code) |>
+            # terra::writeRaster(file.path(tempdir, "forest_mask.tif"), overwrite = TRUE)
     }
 
     return(out)
@@ -426,4 +432,12 @@ get_flm_description<- function(metric){
     out<- c("") |>
         list(. = _) |> with(data.frame(metric = (names(.)), category = .))
 
+}
+
+get_patch_metric_names <- function(){
+    landscapemetrics::list_lsm(level = "patch") |>
+        dplyr::select(metric) |>
+        dplyr::filter(metric != "gyrate") |>
+        unlist() |>
+        unname()
 }
