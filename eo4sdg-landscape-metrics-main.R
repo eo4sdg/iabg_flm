@@ -1,7 +1,7 @@
 # eo4sdg-landscape-metrics-script.R
 
 # This script executes the forest landscape metrics service.
-
+# install.packages("scales")
 ############################# libraries ########################################
 library(landscapemetrics)
 library(tidyverse)
@@ -34,7 +34,7 @@ source(file.path(workflow_dir, "functions_gdfR.R"))
 
 path <- list(aoi = "data/aoi/aoi_gadm_test.shp", ## we can switch it to WKT POLYGON?
              proc_dir = proc_dir, # change it to proc_dir, actually we can delete it
-          #  lc_raster = "path/to/lc.tif",
+             #  lc_raster = "path/to/lc.tif",
              file.path(out_dir, "output_files")) # change the path to PROBAV_LC100_global_v3.0.1_2015-base_Forest-Type-layer_EPSG-4326.tif
 # for testing
 #path$lc_raster = "//gdfs06/DATEN09/ESA-EO4SDG_D9/01_inputData/openData/raster/PROBAV_LC100/PROBAV_LC100_global_v3.0.1_2015-base_Forest-Type-layer_EPSG-4326.tif"
@@ -42,7 +42,6 @@ path <- list(aoi = "data/aoi/aoi_gadm_test.shp", ## we can switch it to WKT POLY
 
 
 #polygon_wkt <- "POLYGON ((9.98457 50.554256, 9.98457 50.602839, 10.05744 50.602839, 10.05744 50.554256, 9.98457 50.554256))" # for now imported as user input
-#polygon_wkt <-"POLYGON((10.548992163967341 50.87698405696199,10.593242640607059 50.92182942965971,10.687541984952986 50.878331967043295,10.612163529731333 50.85001755478288,10.543193835765122 50.87101424577642,10.548992163967341 50.87698405696199))"
 polygon_wkt_sf <- sf::st_as_sfc(polygon_wkt)
 aoi <- terra::vect(polygon_wkt_sf)
 terra::crs(aoi) <- "EPSG:4326"
@@ -81,7 +80,16 @@ print(paste0("These are the files: ", paste0(files, collapse = ",\n")))
 
 ############################### END CODE TO GET FOREST MASK TILES ######################################
 ##########################################################################################################################################################
-#
+
+##### calculate forest landscape metrics ---------------------------------------
+calculate_flm(aoi, lc = path$lc_raster, tempdir = path$proc_dir, outdir = path$proc_dir)
+path$metrics <- file.path(path$proc_dir, "metrics.csv")
+
+##### apply selection methods --------------------------------------------------
+calc_beta_rank(df = path$metrics, outdir = output_files_path)
+path$metrics_ranked <- file.path(output_files_path, "metrics_ranked.csv")
+
+##### make maps ----------------------------------------------------------------
 tempdir <- path$proc_dir
 lc<- terra::rast(glc_path)
 aoi<- sf::st_transform(aoi, terra::crs(lc))
@@ -106,8 +114,15 @@ lm_2019 <- landscapemetrics::spatialize_lsm(lc_forest_2019,
 print("calculate diversity metric")
 di_2019 <- landscapemetrics::lsm_l_shdi(lc_forest_2019)
 
+
+
 print("saving outputs")
-out <- terra::rast(lm_2019$layer_1) |> mask(aoi)
-terra::writeRaster(out,
-                   filename = file.path(output_files_path, "flm_2019.tif"))
+out <- terra::rast(lm_2019$layer_1) |> terra::mask(lc_forest_2019, maskvalues = -9999)
+for(i in seq_along(lm_2019$layer_1)){
+    terra::writeRaster(out[[i]]|> terra::mask(aoi),
+                       filename = file.path(output_files_path,
+                                            paste0((lm_2019$layer_1 |> names())[[i]],
+                                                   "_flm_2019.tif")))
+}
+terra::writeRaster(lc_forest_2019, file.path(output_files_path, "forest_classes_2019.tif"))
 write.csv(di_2019, file = file.path(output_files_path, "diversity_index_2019.csv"))

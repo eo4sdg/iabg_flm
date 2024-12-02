@@ -52,22 +52,21 @@ calculate_flm <- function(aoi,
 
     aoi<- sf::st_transform(aoi, terra::crs(lc))
     landscape <- terra::crop(lc,
-                      aoi,
-                      mask = TRUE,
-                      filename = file.path(tempdir, "lc_from_aoi.tif"),
-                      overwrite = TRUE)
+                             aoi,
+                             mask = TRUE,
+                             filename = file.path(tempdir, "lc_from_aoi.tif"),
+                             overwrite = TRUE)
 
     landscape <- project_to_m(landscape, tempdir = tempdir)
     aoi<- sf::st_transform(aoi, terra::crs(landscape))
-    landscape<- select_forest_from_glc_lcc(landscape, all = TRUE)
+    landscape<- select_forest_from_glc_lcc(landscape, all = FALSE, binary = FALSE)
     # landscape<- terra::subst(landscape, NA, 0,
     #                          raw = TRUE,
     #                          filename = file.path(tempdir, "landscape_no_NA.tif"),
     #                          overwrite = TRUE)    # calculate metrics
     area_metrics <-
-        landscapemetrics::sample_lsm(landscape,
-                                     aoi,
-                                     plot_id = plot_id)
+        landscapemetrics::calculate_lsm(landscape,
+                                        metric = get_patch_metric_names() |> c("shdi"))
 
     if(!missing(class_names)) {
         area_metrics <-
@@ -90,8 +89,8 @@ calculate_flm <- function(aoi,
 
         area_metrics_spatial <-
             dplyr::left_join(aoi,
-                      area_metrics_w,
-                      by = setNames("plot_id", plot_id))
+                             area_metrics_w,
+                             by = setNames("plot_id", plot_id))
         # DOES NOT WORK IF plot_id NOT PROVIDED FROM BEGINNING
         write.csv(area_metrics_spatial, file = file.path(outdir, "metrics_spatial.csv")) #
 
@@ -100,7 +99,7 @@ calculate_flm <- function(aoi,
                     area_metrics_spatial = area_metrics_spatial))
     }
 
-        return(area_metrics)
+    return(area_metrics)
     # # outputs
     # csv
     # render a rmd file with tables
@@ -132,8 +131,7 @@ calc_beta_rank <- function(df,
 
 
     # 0. function input checks
-    required_names <- c("layer", "level", "class", "id", "metric", "value",
-                        "plot_id")
+    required_names <- c("layer", "level", "class", "id", "metric", "value")
     if(!inherits(df, "data.frame")) stop("input must be a data.frame")
     if(!all(required_names %in% names(df)))
         stop(paste0("input must contain columns with all of the following names: ",
@@ -142,10 +140,10 @@ calc_beta_rank <- function(df,
     # 1. Beta calculation
     message("calculating beta")
     beta <- df %>%
-        dplyr::group_by(level, plot_id, metric) %>%
+        dplyr::group_by(level, metric) %>%
         dplyr::summarise(min  = min(value),
-                  max  = max(value),
-                  beta = (max-min)/max) %>%
+                         max  = max(value),
+                         beta = (max-min)/max) %>%
         dplyr::mutate(rank = min_rank(desc(beta)))
 
     # 2. Correlation matrices (for tiebreaks)
@@ -157,14 +155,14 @@ calc_beta_rank <- function(df,
     }
     message("calculating correlations")
     correlations <- df %>%
-        dplyr::group_by(level, plot_id) %>%
+        dplyr::group_by(level) %>%
         dplyr::select(id, class, metric, value) %>%
         tidyr::nest() %>%
         dplyr::mutate(pivoted = map(data, pivot_wider, names_from=metric, values_from=value),
-               pivoted = map(pivoted, select, -id, -class),
-               corr    = map(pivoted, correlate)) %>%
+                      pivoted = map(pivoted, select, -id, -class),
+                      corr    = map(pivoted, correlate)) %>%
         dplyr::mutate(corr_up  = map(corr, shave),
-               corr_up2 = map(corr_up, my_stretch))
+                      corr_up2 = map(corr_up, my_stretch))
 
     # 2.1 make the tiebreaks from here
     message("starting tiebreaks")
@@ -177,18 +175,18 @@ calc_beta_rank <- function(df,
 
     out <-
         beta %>%
-        dplyr::group_by(level, plot_id) %>%
+        dplyr::group_by(level) %>%
         tidyr::nest(.key = "beta") %>%
         dplyr::left_join(correlations) %>%
         dplyr::mutate(beta2 = purrr::map2(beta, corr_up2, left_join, by = c(metric = "x")),
-               beta3 = purrr::map(beta2, my_comb_rank))
+                      beta3 = purrr::map(beta2, my_comb_rank))
 
     # 3. output formatting
     message("formatting output")
     if(!df_with_intermediate_steps){
         out <-
             out %>%
-            dplyr::select(level, plot_id, beta3) %>%
+            dplyr::select(level, beta3) %>%
             dplyr::rename(beta = beta3)
     }
 
@@ -196,7 +194,11 @@ calc_beta_rank <- function(df,
 
     # save to csv
     to_save<- out %>%
-        tidyr::unnest(beta)
+        tidyr::unnest(beta) |>
+        dplyr::filter(level == "patch") |>
+        dplyr::select(-rank) |>
+        dplyr::rename(rank = rank_no_ties)
+
     write.csv(to_save, file = file.path(outdir, "metrics_ranked.csv"))
 
     return(list(ranked_data = out,
@@ -267,8 +269,8 @@ make_metric_maps<- function(landscape,# classified landscape, with NO NA's
     # this reduction is performed out of memory! confirmed equal ouptut
     patches <- patches |> unlist() |> terra::sprc() |>
         terra::merge(filename = file.path(tempdir, "patches.tif"),
-              overwrite = TRUE,
-              names = "id")
+                     overwrite = TRUE,
+                     names = "id")
 
     # level should be user specified (e.g based on the beta selection method Andres)
 
@@ -372,8 +374,8 @@ project_to_m<- function(x, tempdir = "data/temp"){
         wh_epsg <- utm_zone(x, proj4string = TRUE)
         # wh_epsg <- "epsg:6933" fallback option
         terra::project(x, wh_epsg, method = "near",
-                filename = file.path(tempdir, "landscape_crop_project_m.tif"),
-                overwrite = TRUE)
+                       filename = file.path(tempdir, "landscape_crop_project_m.tif"),
+                       overwrite = TRUE)
     } else{ # dont change anything if already in m
         x
     }
@@ -419,9 +421,9 @@ select_forest_from_glc_lcc <- function(x, tempdir = "./", binary = FALSE, all = 
     } else{ # return forest classes
         out<- terra::ifel(x %in% 111:126, x, -9999,
                           filename = file.path(tempdir, "forest_mask_tmp.tif"),
-                          overwrite = TRUE) # |>
-            # terra::categories(value = forest_map_code) |>
-            # terra::writeRaster(file.path(tempdir, "forest_mask.tif"), overwrite = TRUE)
+                          overwrite = TRUE) |>
+            terra::categories(value = forest_map_code) |>
+            terra::writeRaster(file.path(tempdir, "forest_mask.tif"), overwrite = TRUE)
     }
 
     return(out)
