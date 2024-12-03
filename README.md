@@ -1,133 +1,162 @@
-# eo4sdg-forest-flm
+## Landscape metrics
 
-Forest Landscape Metrics (FLM) 
+Landscape metrics are tools to characterize a landscape. This includes
+mainly describing the composition and configuration of a landscape.
+While the composition basically describes how much of the landscape is
+occupied by a certain land cover type, the configuration mainly
+describes the spatial arrangement of the land cover types. The basic
+idea of landscape metrics is to condense as much information as possible
+into single number.
 
-## Getting started
+Within Landscape Metrics, there are three levels of analysis: the
+**patch**, defined as neighboring pixels with the same land cover class;
+**class** level metrics, which summarise all patches belonging to one
+class; and **landscape** level metrics, which summarise the whole
+landscape into a single value.
 
+While there are many metrics calculated, we will focus on the following:
 
-## Data
+-   Mean Patch Area
+-   Patch Shape Index
+-   Diversity Index
 
-The complementary data to run these scripts is located in
+### What is a Patch?
 
-`\\gdfs06\DATEN09\ESA-EO4SDG_D9\02_analysis\FLM\Hessen\test_data\gitlab_v1`.
+Neighboring pixels with the same LC class are considered one patch.
 
-To run the example, clone the repository and copy the `data` folder located in the location above into the project folder. 
-The final project folder structure should look like this:
+![](tutorial/patch.png)
 
-```
-.
-+-- data
-|   +-- aoi
-|   |   +-- aoi_gadm_test.cpg
-|   |   +-- aoi_gadm_test.dbf
-|   |   +-- aoi_gadm_test.prj
-|   |   +-- aoi_gadm_test.sbn
-|   |   +-- aoi_gadm_test.sbx
-|   |   +-- aoi_gadm_test.shp
-|   |   +-- aoi_gadm_test.shx
-|   |   +-- test_aoi2.cpg
-|   |   +-- test_aoi2.dbf
-|   |   +-- test_aoi2.prj
-|   |   +-- test_aoi2.sbn
-|   |   +-- test_aoi2.sbx
-|   |   +-- test_aoi2.shp
-|   |   \-- test_aoi2.shx
-|   \-- hessen
-|       +-- hessen_type_test.tif
-|       \-- hessen_type_test2.tif
-+-- eo4sdg-forest-flm.Rproj
-+-- R
-|   +-- 00-inputs.R
-|   +-- 01-aoicheck.R
-|   +-- 02-clip.R
-|   \-- 03-flm.R
-\-- README.md
+### Mean Patch Area (ha)
 
-```
+Describes the size of patches and classes and the amount of edge. An
+edge is defined as the border between two patches of different forest
+types.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+These metrics mainly characterize the composition of the landscape and
+are able to show dominance or rareness of classes.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+![](tutorial/patch_area.png)
 
-## Add your files
+### Patch Shape Index
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+Describe the shape of patches, mainly by using its area and perimeter (1
+= square, ↑ = non-square) This can be important for many research
+questions, because, e.g., even though, being equal in size, long and
+narrow patches have different characteristics than a squared patch of
+the same size.
 
-```
-cd existing_repo
-git remote add origin https://gdfgitlab.iabg.de/gdfdeveloper/forest/eo4sdg-forest/eo4sdg-forest-flm.git
-git branch -M main
-git push -uf origin main
-```
+![](tutorial/shape_index.png)
 
-## Integrate with your tools
+### Shannon’s Diversity Index
 
-- [ ] [Set up project integrations](https://gdfgitlab.iabg.de/gdfdeveloper/forest/eo4sdg-forest/eo4sdg-forest-flm/-/settings/integrations)
+Only available on the landscape level (↑ = more diversity). They
+describe the abundance and dominance/rareness of classes. Thereby, they
+show the diversity of present classes.
 
-## Collaborate with your team
+<figure>
+<img src="tutorial/diversity.png"
+alt="left: less diversity; right: more diversity" />
+<figcaption aria-hidden="true">left: less diversity; right: more
+diversity</figcaption>
+</figure>
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+## Why FLMs?
 
-## Test and Deploy
+When building roads, train tracks or power lines, landscapes are split
+into pieces. In other words, landscapes are fragmented.
 
-Use the built-in continuous integration in GitLab.
+**What are the consequences?**
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+![ref: Futurium Museum, Berlin](tutorial/why_flm1.jpg) ![ref: Futurium
+Museum, Berlin](tutorial/why_flm2.jpg) ![ref: Futurium Museum,
+Berlin](tutorial/why_flm3.jpg)
 
-***
+With FLMs, we can quantify changes in the landscapes, which can then be
+attributed to specific events (e.g., road building).
 
-# Editing this README
+In the same manner, the impact of building infrastructure through the
+landscapes can be assessed. This in turn enables better planning in the
+context of biodiversity conservation.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+With satellite imagery, this analysis can be fully automated and near
+real time at no extra cost. The FLM are ready to be analysed in the
+F-TEP server.
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## F-TEP
 
-## Name
-Choose a self-explaining name for your project.
+For the implementation of FLM, we require only two inputs:
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+-   **Land Cover map** - Default World LC map available in the FTEP
+    platform. Produced by the global component of the Copernicus Land
+    Service, derived from PROBA-V satellite observations and ancillary
+    datasets.
+-   **AOI** – Are of interest in Well-Known-Text format
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+The output will be one .tif file per metric, containing the results for
+a bounding box containing the AOI.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+To operate F-TEP, follow the next steps:
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+1.  Go to the Forestry tep website at <https://f-tep.com/> and click on
+    the Platform button on the top-right. ![](tutorial/ftep1.png)
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+2.  You will be taken to the log-in portal. Enter your guest credentials
+    here. ![](tutorial/ftep2.png)
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+3.  After logging in, the website contains a map. Click on the
+    “services” button to access the various services provided by EO4SDG.
+    ![](tutorial/ftep3.png)
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+4.  Select the desired service, in this case the one that contains “flm”
+    in the name. ![](tutorial/ftep4.jpg)
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+5.  Input your desired aoi in WKT form (B). The input images field
+    should be left empty (A). The aoi can be created directly on the
+    platform by clicking the square or polygon in the top right (C) and
+    then clicking on (D). Alternatively, provide your desired AOI in WKT
+    form, for example, POLYGON((105.88 21.32,105.80 21.24, …))
+    ![](tutorial/ftep5.png)
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+6.  After the above steps are done, press the play button. The results
+    can be found under the Results tab in the Jobs section.
+    ![](tutorial/ftep6.jpg)
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+7.  The downloadable files are found in the “Output” tab, once you click
+    on the job ID. ![](tutorial/ftep7.jpg)
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Results
 
-## License
-For open source projects, say how it is licensed.
+### Use Case: Vietnam
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+As stated shortly before, the output files are in .tif format.
+
+In this example we loaded them into R and plotted the results for
+applying the FLM to all the Administrative Units (level 3) of Vietnam
+inside a specific Province (level 1).
+
+We then aggregated the results by averaging them across the whole
+Administrative Unit (level 3).
+
+#### Patch Area
+
+#### Shape Index
+
+#### Shanon’s Diversity Index
+
+### Use Case: Forest Growth
+
+## Summary
+
+In this readme we have gone over the following topics:
+
+-   FLMs quantify landscapes
+-   Linked to biodiversity
+-   Run analysis online: F-TEP
+-   Visualization and aggregation of results
+
+More information is available in the following links:
+
+-   Youtube: <https://www.youtube.com/@eo4sdg-forest-z3c>
+-   LinkedIn: www.linkedin.com/company/eo4sdg-forest/
+-   Website: <https://eo4sdg.github.io/eo4sdg-site/>
+-   GitHub: @eo4sdg
