@@ -56,7 +56,7 @@ When building roads, train tracks or power lines, landscapes are split into piec
 
 **What are the consequences?**
 
-![ref: Futurium Museum, Berlin](tutorial/why_flm1.jpg)
+![Futurium Museum, Berlin](tutorial/why_flm1.jpg)
 ![ref: Futurium Museum, Berlin](tutorial/why_flm2.jpg)
 ![ref: Futurium Museum, Berlin](tutorial/why_flm3.jpg)
 

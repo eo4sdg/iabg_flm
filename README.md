@@ -67,7 +67,7 @@ into pieces. In other words, landscapes are fragmented.
 
 **What are the consequences?**
 
-![ref: Futurium Museum, Berlin](tutorial/why_flm1.jpg) ![ref: Futurium
+![Futurium Museum, Berlin](tutorial/why_flm1.jpg) ![ref: Futurium
 Museum, Berlin](tutorial/why_flm2.jpg) ![ref: Futurium Museum,
 Berlin](tutorial/why_flm3.jpg)
 
