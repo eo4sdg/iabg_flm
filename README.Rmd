@@ -57,8 +57,11 @@ When building roads, train tracks or power lines, landscapes are split into piec
 **What are the consequences?**
 
 ![Futurium Museum, Berlin](tutorial/why_flm1.jpg)
-![ref: Futurium Museum, Berlin](tutorial/why_flm2.jpg)
-![ref: Futurium Museum, Berlin](tutorial/why_flm3.jpg)
+
+![Futurium Museum, Berlin](tutorial/why_flm2.jpg)
+
+![Futurium Museum, Berlin](tutorial/why_flm3.jpg)
+
 
 With FLMs, we can quantify changes in the landscapes, which can then be attributed to specific events (e.g., road building). 
 

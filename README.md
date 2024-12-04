@@ -67,9 +67,20 @@ into pieces. In other words, landscapes are fragmented.
 
 **What are the consequences?**
 
-![Futurium Museum, Berlin](tutorial/why_flm1.jpg) ![ref: Futurium
-Museum, Berlin](tutorial/why_flm2.jpg) ![ref: Futurium Museum,
-Berlin](tutorial/why_flm3.jpg)
+<figure>
+<img src="tutorial/why_flm1.jpg" alt="Futurium Museum, Berlin" />
+<figcaption aria-hidden="true">Futurium Museum, Berlin</figcaption>
+</figure>
+
+<figure>
+<img src="tutorial/why_flm2.jpg" alt="Futurium Museum, Berlin" />
+<figcaption aria-hidden="true">Futurium Museum, Berlin</figcaption>
+</figure>
+
+<figure>
+<img src="tutorial/why_flm3.jpg" alt="Futurium Museum, Berlin" />
+<figcaption aria-hidden="true">Futurium Museum, Berlin</figcaption>
+</figure>
 
 With FLMs, we can quantify changes in the landscapes, which can then be
 attributed to specific events (e.g., road building).
