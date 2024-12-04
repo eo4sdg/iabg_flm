@@ -147,7 +147,9 @@ are richer in forest and have larger average patch areas.
 Satellite imagery and the patch distribution across the region support
 this finding.
 
-![](tutorial/viet_patch_area.png) \#### Shape Index
+![](tutorial/viet_patch_area.png)
+
+#### Shape Index
 
 The forest patches in Quang Nam, regardless of their location within
 their respective regions, do not have very complex and close to squared
