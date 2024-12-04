@@ -137,13 +137,38 @@ inside a specific Province (level 1).
 We then aggregated the results by averaging them across the whole
 Administrative Unit (level 3).
 
+![](tutorial/viet_subd.jpg)
+
 #### Patch Area
 
-#### Shape Index
+Municipalities outside of urban centres and further away from the sea
+are richer in forest and have larger average patch areas.
+
+Satellite imagery and the patch distribution across the region support
+this finding.
+
+![](tutorial/viet_patch_area.png) \#### Shape Index
+
+The forest patches in Quang Nam, regardless of their location within
+their respective regions, do not have very complex and close to squared
+shapes.
+
+![](tutorial/viet_shp_idx.png)
 
 #### Shanon’s Diversity Index
 
-### Use Case: Forest Growth
+Municipalities with the lowest diversity scores have a clear dominance
+of closed evergreen broad leaf forests over all forest types.
+
+Although other forest types may be present in these municipalities, the
+Shannon’s diversity metric takes the abundance of a species into account
+in its calculation.
+
+The lack of dense broad leaf forests towards the coast gives way to
+other species that are relatively more abundant, increasing the
+diversity index accordingly.
+
+![](tutorial/viet_div_idx.jpg)
 
 ## Summary
 
